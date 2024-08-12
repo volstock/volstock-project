@@ -176,10 +176,19 @@ This is a fairly realistic simulation of a typical data engineering project. In 
 
 Enjoy this! And good luck!
 
-##Volstock Documentation
+# Volstock Documentation
 
-###How to create a branch, push to GitHub and merge to main
+## How to Create a Branch, Push to GitHub, and Merge to Main
 
-```git checkout -b new-branch```
-```git push origin new-branch```
-Open a PR using the new branch and merge to main. 
+1. **Create a new branch:**
+   ```bash
+   git checkout -b new-branch
+   ```
+
+2. **Push the new branch to GitHub:**
+   ```bash
+   git push origin new-branch
+   ```
+
+3. **Open a Pull Request (PR) using the new branch and merge it to `main`.**
+
