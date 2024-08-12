@@ -175,3 +175,11 @@ This is a fairly realistic simulation of a typical data engineering project. In 
 **Above all, don't rush**: it will be better to deliver a high-quality MVP than a more complex but poorly-engineered platform. 
 
 Enjoy this! And good luck!
+
+##Volstock Documentation
+
+###How to create a branch, push to GitHub and merge to main
+
+```git checkout -b new-branch```
+```git push origin new-branch```
+Open a PR using the new branch and merge to main. 
