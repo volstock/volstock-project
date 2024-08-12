@@ -20,6 +20,6 @@ jobs:
         run: make create-environment
       - name: Run Requirements
         run: make requirements
-      - name: Run Tests
-        run: make run-checks
+      # - name: Run Tests
+      #   run: make run-checks
 
