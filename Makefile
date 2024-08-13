@@ -70,7 +70,7 @@ dev-setup: bandit safety black coverage flake
 ## Run the security test (bandit + safety)
 security-test:
 	$(call execute_in_env, safety check -r ./requirements.txt)
-    $(call execute_in_env, bandit -lll ./src/*.py ./test/*.py)
+	$(call execute_in_env, bandit -lll ./src/*.py ./test/*.py)
 
 ## Run the black code check
 run-black:
