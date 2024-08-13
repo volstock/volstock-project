@@ -18,7 +18,7 @@ resource "aws_lambda_function" "ingest_lambda" {
   layers = [aws_lambda_layer_version.ingest_layer.arn]
   environment {
     variables = {
-      foo = "bar"
+      S3_INGEST_BUCKET=aws_s3_bucket.ingest_bucket.bucket
     }
   }
 }
