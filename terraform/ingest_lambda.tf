@@ -1,3 +1,11 @@
+resource "aws_lambda_layer_version" "ingest_layer" {
+    layer_name = "ingest_layer"
+    compatible_runtimes = ["python3.12"]
+    s3_bucket = aws_s3_object.ingest_lambda_layer.bucket
+    s3_key = aws_s3_object.ingest_lambda_layer.key
+}
+
+
 resource "aws_lambda_function" "ingest_lambda" {
   s3_bucket        = aws_s3_bucket.lambda_code_bucket.bucket
   s3_key           = aws_s3_object.ingest_lambda_code.key
@@ -7,6 +15,7 @@ resource "aws_lambda_function" "ingest_lambda" {
   source_code_hash = data.archive_file.ingest_lambda_deployment_package.output_base64sha256
   timeout          = 60
   runtime          = "python3.12"
+  layers = [aws_lambda_layer_version.ingest_layer.arn]
   environment {
     variables = {
       foo = "bar"
