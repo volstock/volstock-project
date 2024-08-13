@@ -7,13 +7,13 @@ terraform {
   }
 
   backend "s3" {
-    bucket         	   = "vostock-backend-123"
-    key                 = "state/terraform.tfstate"
-    region         	   = "eu-west-2"
+    bucket = "vostock-backend-123"
+    key    = "state/terraform.tfstate"
+    region = "eu-west-2"
 
   }
 }
-provider "aws" { 
+provider "aws" {
   region = "eu-west-2"
-  
+
 }
