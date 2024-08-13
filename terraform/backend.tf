@@ -7,7 +7,7 @@ terraform {
   }
 
   backend "s3" {
-    bucket         	   = "volstock-test-backend-13082024"
+    bucket         	   = "vostock-backend-123"
     key                 = "state/terraform.tfstate"
     region         	   = "eu-west-2"
     encrypt        	   = true
