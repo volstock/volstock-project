@@ -1,17 +1,17 @@
 variable "bucket_prefix" {
-  type = string
+  type    = string
   default = "ingest-bucket"
 }
 
-variable "iam_role_prefix"{ 
-    type = string
-    default = "iam_role"
-} 
+variable "iam_role_prefix" {
+  type    = string
+  default = "iam_role"
+}
 
-variable "iam_policy_prefix"{ 
-    type = string
-    default = "iam_policy"
-} 
+variable "iam_policy_prefix" {
+  type    = string
+  default = "iam_policy"
+}
 
 
 variable "retention_days" {
