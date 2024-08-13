@@ -77,7 +77,7 @@ run-black:
 	$(call execute_in_env, black  ./src/*.py ./test/*.py)
 
 ##Run the flake8 code styler
-run-flake8:
+run-flake:
 	$(call execute_in_env, flake8  ./src/*.py ./test/*.py)
 
 ## Run the unit tests
@@ -89,4 +89,4 @@ check-coverage:
 	$(call execute_in_env, PYTHONPATH=${PYTHONPATH} pytest --cov=src test/)
 
 # Run all checks
-run-checks: run-black run-flake8 unit-test check-coverage
+run-checks: run-black run-flake unit-test check-coverage
