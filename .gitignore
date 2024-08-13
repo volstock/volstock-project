@@ -1,3 +1,11 @@
+*.tfstate
+**/.terraform
+**/.terraform.lock.hcl
+venv
+creds
+aws.sh
+db.env
 __pycache__/
 venv/
 .pytest_cache
+
