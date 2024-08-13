@@ -13,4 +13,4 @@
 
 ## Terraform Workflow
 - This is a Work in Progress as the CICD pair have not got access to the production TF Config File.
-- This workflow automates the Infrastructure as Code Process. Your code will be deployed to AWS when you push your code to GitHub.
+- This workflow automates the Infrastructure as Code Process. Your code will be deployed to AWS when you push your code to GitHub. 
