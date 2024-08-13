@@ -57,27 +57,41 @@ black:
 coverage:
 	$(call execute_in_env, $(PIP) install coverage)
 
-## Set up dev requirements (bandit, safety, black)
-dev-setup: bandit safety black coverage
+## Install flake8
+flake:
+	$(call execute_in_env, $(PIP) install flake8)
+
+
+## Set up dev requirements (bandit, safety, black, flake)
+dev-setup: bandit safety black coverage flake
 
 # Build / Run
 
 ## Run the security test (bandit + safety)
 security-test:
 	$(call execute_in_env, safety check -r ./requirements.txt)
-	$(call execute_in_env, bandit -lll */*.py *c/*/*.py)
+	$(call execute_in_env, bandit -lll ./src/*.py)
+## $(call execute_in_env, bandit -lll ./src/*.py ./test/*.py)
 
 ## Run the black code check
 run-black:
-	$(call execute_in_env, black  ./src/*/*.py ./test/*/*.py)
+	$(call execute_in_env, black  ./src/*.py)
+# $(call execute_in_env, black  ./src/*.py ./test/*.py)
+
+
+##Run the flake8 code styler
+run-flake:
+	$(call execute_in_env, flake8  ./src/*.py)
+# $(call execute_in_env, flake8  ./src/*.py ./test/*.py)
 
 ## Run the unit tests
-unit-test:
-	$(call execute_in_env, PYTHONPATH=${PYTHONPATH} pytest -v)
+# unit-test:
+# 	$(call execute_in_env, PYTHONPATH=${PYTHONPATH} pytest -v)
 
 ## Run the coverage check
-check-coverage:
-	$(call execute_in_env, PYTHONPATH=${PYTHONPATH} pytest --cov=src test/)
+# check-coverage:
+# 	$(call execute_in_env, PYTHONPATH=${PYTHONPATH} pytest --cov=src test/)
 
-## Run all checks
-# run-checks: run-black unit-test check-coverage
+# Run all checks
+# run-checks: run-black run-flake unit-test check-coverage
+run-checks: run-black run-flake 

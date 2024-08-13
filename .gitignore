@@ -6,3 +6,4 @@ creds
 aws.sh
 db.env
 deployment-packages/layer*
+.pytest_cache
