@@ -74,7 +74,7 @@ security-test:
 
 ## Run the black code check
 run-black:
-    $(call execute_in_env, black  ./src/*.py ./test/*.py)
+	$(call execute_in_env, black  ./src/*.py ./test/*.py)
 
 
 ##Run the flake8 code styler
