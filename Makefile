@@ -92,4 +92,4 @@ check-coverage:
 
 # Run all checks
 # run-checks: run-black run-flake unit-test check-coverage
-run-checks: run-black unit-test check-coverage
+run-checks: security-test run-black unit-test check-coverage
