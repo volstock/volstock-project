@@ -110,3 +110,5 @@ def store_table_in_bucket(bucket, dict_table, table_name, date):
         )
     except ClientError as e:
         raise IngestError(f"Failed to store table in bucket. {e}")
+
+#checking branch
