@@ -5,7 +5,7 @@ venv
 creds
 aws.sh
 db.env
-deployment-packages/layer*
+deployment-packages
 .pytest_cache
 **/__pycache__
 *coverage*
