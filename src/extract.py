@@ -2,12 +2,15 @@ import pg8000.native
 from pg8000.exceptions import DatabaseError
 import boto3
 from botocore.exceptions import ClientError
+from dotenv import load_dotenv
 import os
 import json
 from datetime import datetime
 
-S3_INGEST_BUCKET = os.environ["S3_INGEST_BUCKET"]
-
+try:
+    S3_INGEST_BUCKET = os.environ["S3_INGEST_BUCKET"]
+except:
+    S3_INGEST_BUCKET = ""
 
 class IngestError(Exception):
     pass
