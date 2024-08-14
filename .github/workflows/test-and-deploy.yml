@@ -3,7 +3,7 @@ name: Test & Deploy
 on:
   push:
     branches:
-      - 'main'
+      - '**'
 
 jobs:
   run-tests:
@@ -16,16 +16,15 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12.4'
-      - name: Set Up Venv
-        run: make create-environment
-      - name: Run Ingest Requirements
-        run: make requirements-ingest
+      - name: Set up venv and Run requirements
+        run: make requirements
       - name: Create Dev Setup
         run: make dev-setup
       - name: Run security tests
         run: make security-test
       - name: Run Tests
         run: make run-checks
+      
 
   terraform-pipeline:
     name: terraform-pipeline
@@ -34,20 +33,20 @@ jobs:
     steps: 
       - name: Checkout Repo
         uses: actions/checkout@v4
-      - name: Install Terraform
-        uses: hashicorp/setup-terraform@v3
       - name: AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-west-2
+      - name: Create requirements
+        run: make requirements
       - name: Terraform Init
-        working-directory: terraform
+        working-directory: ./terraform
         run: terraform init
       - name: Plan
-        working-directory: terraform
+        working-directory: ./terraform
         run: terraform plan
       - name: Apply
-        working-directory: terraform
+        working-directory: ./terraform
         run: terraform apply --auto-approve
