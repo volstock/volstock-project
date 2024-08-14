@@ -52,9 +52,8 @@ pytest:
 coverage:
 	$(call execute_in_env, $(PIP) install pytest-cov)
 
-black
+black:
 	$(call execute_in_env, $(PIP) install black)
-
 
 ## Set up dev requirements (bandit, safety, black, flake)
 dev-setup: bandit safety flake pytest coverage black
