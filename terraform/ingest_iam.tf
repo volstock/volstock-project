@@ -44,8 +44,12 @@ resource "aws_iam_role_policy_attachment" "cw_ingest_policy_attachemnt" {
 
 data "aws_iam_policy_document" "s3_ingest_document" {
   statement {
-    actions   = ["s3:PutObject"]
+    actions   = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]
     resources = ["${aws_s3_bucket.ingest_bucket.arn}/*"]
+  }
+  statement {
+    actions   = ["s3:ListBucket"]
+    resources = ["${aws_s3_bucket.ingest_bucket.arn}"]
   }
 }
 
@@ -96,7 +100,3 @@ resource "aws_iam_role_policy_attachment" "sm_ingest_policy_attachment" {
   role       = aws_iam_role.ingest_lambda_role.name
   policy_arn = aws_iam_policy.sm_policy_ingest.arn
 }
-
-
-
-
