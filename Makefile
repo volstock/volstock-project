@@ -16,16 +16,7 @@ PIP:=pip
 
 ## Create python interpreter environment.
 create-environment:
-	@echo ">>> About to create environment: $(PROJECT_NAME)..."
-	@echo ">>> check python3 version"
-	( \
-		$(PYTHON_INTERPRETER) --version; \
-	)
-	@echo ">>> Setting up VirtualEnv."
-	( \
-	    $(PIP) install -q virtualenv virtualenvwrapper; \
-	    virtualenv venv --python=$(PYTHON_INTERPRETER); \
-	)
+	$(PYTHON_INTERPRETER) -m venv venv
 
 # Define utility variable to help calling Python from the virtual environment
 ACTIVATE_ENV := source venv/bin/activate
