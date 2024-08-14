@@ -52,8 +52,12 @@ pytest:
 coverage:
 	$(call execute_in_env, $(PIP) install pytest-cov)
 
+black
+	$(call execute_in_env, $(PIP) install black)
+
+
 ## Set up dev requirements (bandit, safety, black, flake)
-dev-setup: bandit safety flake pytest coverage
+dev-setup: bandit safety flake pytest coverage black
 
 # Build / Run
 
@@ -74,10 +78,13 @@ run-flake:
 unit-test:
 	$(call execute_in_env, PYTHONPATH=${PYTHONPATH} pytest -vv)
 
+run-black:
+	$(call execute_in_env, PYTHONPATH=${PYTHONPATH} black .)
+
 ## Run the coverage check
 check-coverage:
 	$(call execute_in_env, PYTHONPATH=${PYTHONPATH} pytest --cov=src test/)
 
 # Run all checks
 # run-checks: run-black run-flake unit-test check-coverage
-run-checks: run-flake unit-test check-coverage
+run-checks: run-flake unit-test check-coverage run-black
