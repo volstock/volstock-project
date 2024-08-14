@@ -18,10 +18,12 @@ jobs:
           python-version: '3.12.4'
       - name: Set Up Venv
         run: make create-environment
-      - name: Run Requirements
-        run: make requirements
+      - name: Run Ingest Requirements
+        run: make requirements-ingest
       - name: Create Dev Setup
         run: make dev-setup
+      - name: Run security tests
+        run: make security-test
       - name: Run Tests
         run: make run-checks
 
