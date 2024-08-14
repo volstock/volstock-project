@@ -6,7 +6,10 @@ import os
 import json
 from datetime import datetime
 
-S3_INGEST_BUCKET = os.environ["S3_INGEST_BUCKET"]
+try:
+    S3_INGEST_BUCKET = os.environ["S3_INGEST_BUCKET"]
+except Exception:
+    S3_INGEST_BUCKET = ""
 
 
 class IngestError(Exception):
@@ -73,9 +76,8 @@ def get_dict_table(conn, table):
         raise IngestError(f"Failed to get table values, {e}")
 
 
-def is_bucket_empty(bucket):
+def is_bucket_empty(bucket, s3=boto3.client("s3", region_name="eu-west-2")):
     try:
-        s3 = boto3.client("s3", region_name="eu-west-2")
         prefix = "latest/"
         objects = s3.list_objects_v2(Bucket=bucket, Prefix=f"{prefix}")
         if "Contents" not in objects:
@@ -86,9 +88,10 @@ def is_bucket_empty(bucket):
         raise IngestError(f"Failed to check if bucket is empty. {e}")
 
 
-def archive_tables(bucket, keys, prefix):
+def archive_tables(
+    bucket, keys, prefix, s3=boto3.client("s3", region_name="eu-west-2")
+):
     try:
-        s3 = boto3.client("s3", region_name="eu-west-2")
         for key in keys:
             s3.copy_object(
                 Bucket=bucket,
@@ -100,9 +103,11 @@ def archive_tables(bucket, keys, prefix):
         raise IngestError(f"Failed to archive tables. {e}")
 
 
-def store_table_in_bucket(bucket, dict_table, table_name, date):
+def store_table_in_bucket(
+    bucket, dict_table, table_name, date,
+    s3=boto3.client("s3", region_name="eu-west-2")
+):
     try:
-        s3 = boto3.client("s3", region_name="eu-west-2")
         s3.put_object(
             Body=json.dumps(dict_table, indent=4, default=str).encode(),
             Bucket=bucket,

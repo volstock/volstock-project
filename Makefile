@@ -57,6 +57,9 @@ flake:
 
 pytest:
 	$(call execute_in_env, $(PIP) install pytest)
+	$(call execute_in_env, $(PIP) install moto)
+	$(call execute_in_env, $(PIP) install boto3)
+	$(call execute_in_env, $(PIP) install pg8000)
 
 coverage:
 	$(call execute_in_env, $(PIP) install pytest-cov)
