@@ -36,6 +36,7 @@ define execute_in_env
 endef
 
 requirements-ingest:
+	$(call execute_in_env, mkdir ./deployment-packages/)
 	$(call execute_in_env, mkdir ./deployment-packages/layer-ingest/)
 	$(call execute_in_env, mkdir ./deployment-packages/layer-ingest/python)
 	$(call execute_in_env, $(PIP) install boto3 -t ./deployment-packages/layer-ingest/python/ --upgrade)
