@@ -12,6 +12,7 @@ PYTHONPATH=${WD}
 SHELL := /bin/bash
 PROFILE = default
 PIP:=pip
+ACTIVATE_ENV := source venv/bin/activate
 
 
 ## Create python interpreter environment.
@@ -19,7 +20,6 @@ create-environment:
 	$(PYTHON_INTERPRETER) -m venv venv
 
 # Define utility variable to help calling Python from the virtual environment
-ACTIVATE_ENV := source venv/bin/activate
 
 # Execute python related functionalities from within the project's environment
 define execute_in_env
@@ -47,10 +47,7 @@ flake:
 	$(call execute_in_env, $(PIP) install flake8)
 
 pytest:
-	$(call execute_in_env, $(PIP) install pytest)
-	$(call execute_in_env, $(PIP) install moto)
-	$(call execute_in_env, $(PIP) install boto3)
-	$(call execute_in_env, $(PIP) install pg8000)
+	$(call execute_in_env, $(PIP) install pytest moto boto3 pg8000)
 
 coverage:
 	$(call execute_in_env, $(PIP) install pytest-cov)
