@@ -34,15 +34,18 @@ def lambda_handler(event, context):
         conn.close()
 
 
+def get_secrets(sm):
+    database = sm.get_secret_value(SecretId="db_name")["SecretString"]
+    host = sm.get_secret_value(SecretId="db_host")["SecretString"]
+    user = sm.get_secret_value(SecretId="db_user")["SecretString"]
+    password = sm.get_secret_value(SecretId="db_pass")["SecretString"]
+    return database, host, user, password
+
+
 def get_connection():
     try:
         sm = boto3.client("secretsmanager", region_name="eu-west-2")
-        return pg8000.native.Connection(
-            database=sm.get_secret_value(SecretId="db_name")["SecretString"],
-            host=sm.get_secret_value(SecretId="db_host")["SecretString"],
-            user=sm.get_secret_value(SecretId="db_user")["SecretString"],
-            password=sm.get_secret_value(SecretId="db_pass")["SecretString"],
-        )
+        return pg8000.native.Connection(get_secrets(sm))
     except ClientError as e:
         raise IngestError(f"Failed to retrieve secrets. {e}")
     except DatabaseError as e:
