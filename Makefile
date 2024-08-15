@@ -27,8 +27,8 @@ create-environment:
 # Execute python related functionalities from within the project's environment
 
 requirements-ingest:
-	$(call execute_in_env, $(PIP) install boto3 -t ./deployment-packages/layer-ingest/python/)
-	$(call execute_in_env, $(PIP) install pg8000 -t ./deployment-packages/layer-ingest/python/)
+	$(call execute_in_env, $(PIP) install boto3 -t ./deployment-packages/layer-ingest/python/ --upgrade)
+	$(call execute_in_env, $(PIP) install pg8000 -t ./deployment-packages/layer-ingest/python/ --upgrade)
 
 requirements: create-environment requirements-ingest
 

@@ -5,11 +5,9 @@ from botocore.exceptions import ClientError
 import os
 import json
 from datetime import datetime
+import logging
 
-try:
-    S3_INGEST_BUCKET = os.environ["S3_INGEST_BUCKET"]
-except Exception:
-    S3_INGEST_BUCKET = ""
+logging.basicConfig(level=50)
 
 
 class IngestError(Exception):
@@ -18,6 +16,7 @@ class IngestError(Exception):
 
 def lambda_handler(event, context):
     try:
+        S3_INGEST_BUCKET = get_bucket_name()
         conn = get_connection()
         is_empty, keys, prefix = is_bucket_empty(S3_INGEST_BUCKET)
         tables = get_table_names(conn)
@@ -29,9 +28,22 @@ def lambda_handler(event, context):
             store_table_in_bucket(S3_INGEST_BUCKET, dict_table, table, date)
         return {"msg": "Ingestion successfull"}
     except IngestError as e:
-        return {"msg": "Failed to ingest data", "err": str(e)}
+        response = {"msg": "Failed to ingest data", "err": str(e)}
+        logging.critical(response)
+        return response
     finally:
-        conn.close()
+        try:
+            conn.close()
+        except UnboundLocalError:
+            pass
+
+
+def get_bucket_name():
+    try:
+        bucket = os.environ["S3_INGEST_BUCKET"]
+        return bucket
+    except KeyError as e:
+        raise IngestError(f"Failed to get env bucket name. {e}")
 
 
 def get_connection():
