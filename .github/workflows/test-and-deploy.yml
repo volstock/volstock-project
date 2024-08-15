@@ -1,7 +1,6 @@
 #This workflow only happens when code is pushed into the main branch. It will test and deploy your code to AWS.
 
 name: Test & Deploy
-
 on:
   push:
     branches:

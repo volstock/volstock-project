@@ -1,6 +1,6 @@
 #This code will run on all branches EXCEPT main. It will run checks on your code and check the terraform files using terraform plan
 
-name: Test & Deploy
+name: Test-only
 on:
   push:
     branches-ignore:
