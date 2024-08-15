@@ -14,6 +14,9 @@ PROFILE = default
 PIP:=pip
 ACTIVATE_ENV := source venv/bin/activate
 
+define execute_in_env
+	$(ACTIVATE_ENV) && $1
+endef
 
 ## Create python interpreter environment.
 create-environment:
@@ -22,9 +25,6 @@ create-environment:
 # Define utility variable to help calling Python from the virtual environment
 
 # Execute python related functionalities from within the project's environment
-define execute_in_env
-	$(ACTIVATE_ENV) && $1
-endef
 
 requirements-ingest:
 	$(call execute_in_env, $(PIP) install boto3 -t ./deployment-packages/layer-ingest/python/)
@@ -86,4 +86,4 @@ check-coverage:
 
 # Run all checks
 # run-checks: run-black run-flake unit-test check-coverage run-black
-run-checks: run-flake unit-test check-coverage run-black
+run-checks: run-flake unit-test check-coverage
