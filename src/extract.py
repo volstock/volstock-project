@@ -14,7 +14,6 @@ class IngestError(Exception):
     pass
 
 
-#
 def lambda_handler(event, context):
     try:
         S3_INGEST_BUCKET = get_bucket_name()
