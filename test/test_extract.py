@@ -2,10 +2,11 @@ import pytest
 import os
 import boto3
 from moto import mock_aws
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from src.extract import (
     get_bucket_name,
     get_dict_table,
+    get_table_names,
     is_bucket_empty,
     store_table_in_bucket,
     archive_tables,
@@ -41,8 +42,9 @@ def test_get_bucket_name():
 
 
 def test_get_bucket_name_error():
-    with pytest.raises(IngestError):
+    with pytest.raises(IngestError) as e:
         get_bucket_name()
+    assert str(e.value) == "Failed to get env bucket name. 'S3_INGEST_BUCKET'"
 
 
 @pytest.fixture(scope="function")
@@ -81,50 +83,29 @@ def test_is_bucket_empty_not_empty(s3, s3_bucket):
 
 
 def test_is_bucket_empty_error(s3, s3_bucket):
-    with pytest.raises(IngestError):
+    with pytest.raises(IngestError) as e:
         is_bucket_empty(S3_MOCK_BUCKET_WRONG_NAME, s3)
+    assert (
+        str(e.value) == "Failed to check if bucket is empty. An error"
+        " occurred (NoSuchBucket) when calling the ListObjectsV2 operation:"
+        " The specified bucket does not exist"
+    )
 
 
-class MockConnection:
-    def __init__(
-            self, database="db", host="localhost", user="user", password="pass"
-    ):
-        self.tables = [
-            {
-                "name": "mock-db-table-1",
-                "columns": [{"name": "c1"}, {"name": "c2"}],
-                "rows": [["A", 1], ["B", 2]],
-            },
-            {
-                "name": "mock-db-table-2",
-                "columns": [{"name": "c1"}, {"name": "c2"}],
-                "rows": [["X", 3], ["Y", 4]],
-            },
-        ]
-        self._select_table = self.tables[0]
-
-    @property
-    def columns(self):
-        return self._select_table["columns"]
-
-    def run(self, query):
-        for table in self.tables:
-            if table["name"] == query[14:]:
-                self._select_table = table
-                return self._select_table["rows"]
-        raise DatabaseError("Wrong table name")
-
-
-@patch("pg8000.native.Connection", new_callable=MockConnection)
+@patch("pg8000.native.Connection")
 def test_get_dict_table(mock_conn):
+    mock_conn.run.return_value = [["A", 1], ["B", 2]]
+    mock_conn.columns = {"name": "c1"}, {"name": "c2"}
     result = get_dict_table(mock_conn, "mock-db-table-1")
     assert result == {"c1": ["A", "B"], "c2": [1, 2]}
 
 
-@patch("pg8000.native.Connection", new_callable=MockConnection)
+@patch("pg8000.native.Connection")
 def test_get_dict_table_error(mock_conn):
-    with pytest.raises(IngestError):
+    mock_conn.run.side_effect = DatabaseError("Mock DB error")
+    with pytest.raises(IngestError) as e:
         get_dict_table(mock_conn, "mock-wrong-db-table")
+    assert str(e.value) == "Failed to get table values, Mock DB error"
 
 
 def test_store_table_in_bucket(s3, s3_bucket):
@@ -143,7 +124,7 @@ def test_store_table_in_bucket(s3, s3_bucket):
 
 
 def test_store_table_in_bucket_error(s3, s3_bucket):
-    with pytest.raises(IngestError):
+    with pytest.raises(IngestError) as e:
         store_table_in_bucket(
             S3_MOCK_BUCKET_WRONG_NAME,
             {"c1": [1, 2], "c2": ["A", "B"]},
@@ -151,6 +132,11 @@ def test_store_table_in_bucket_error(s3, s3_bucket):
             "2024-01-01",
             s3,
         )
+    assert (
+        str(e.value) == "Failed to store table in bucket. An error occurred "
+        "(NoSuchBucket) when calling the PutObject operation: The specified "
+        "bucket does not exist"
+    )
 
 
 def test_archive_tables(s3, s3_bucket):
@@ -172,3 +158,20 @@ def test_archive_tables(s3, s3_bucket):
     assert "Contents" in objects
     keys = [obj["Key"][8:] for obj in objects["Contents"]]
     assert keys == ["2024-01-01/mock-db-table.json"]
+
+
+def test_get_table_names():
+    conn = MagicMock()
+    conn.run.return_value = [["t1"], ["t2"], ["t3"], ["t4"]]
+    assert get_table_names(conn) == ["t1", "t2", "t3", "t4"]
+
+    conn.run.return_value = [["_t1"], ["t2"], ["_t3"], ["t4"]]
+    assert get_table_names(conn) == ["t2", "t4"]
+
+
+def test_get_table_names_error():
+    conn = MagicMock()
+    conn.run.side_effect = DatabaseError("Mock DB error")
+    with pytest.raises(IngestError) as e:
+        get_table_names(conn)
+    assert str(e.value) == "Failed to get table names. Mock DB error"
