@@ -71,7 +71,7 @@ security-test:
 
 ##Run the flake8 code styler
 run-flake:
-	$(call execute_in_env, flake8  ./src/)
+	$(call execute_in_env, flake8  ./src/ ./test)
 
 ## Run the unit tests
 unit-test:

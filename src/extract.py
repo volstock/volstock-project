@@ -46,6 +46,7 @@ def get_secrets(sm):
         "password": password
     }
 
+
 def get_connection():
     try:
         sm = boto3.client("secretsmanager", region_name="eu-west-2")
