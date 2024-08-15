@@ -12,28 +12,19 @@ PYTHONPATH=${WD}
 SHELL := /bin/bash
 PROFILE = default
 PIP:=pip
-
-
-## Create python interpreter environment.
-create-environment:
-	@echo ">>> About to create environment: $(PROJECT_NAME)..."
-	@echo ">>> check python3 version"
-	( \
-		$(PYTHON_INTERPRETER) --version; \
-	)
-	@echo ">>> Setting up VirtualEnv."
-	( \
-	    $(PIP) install -q virtualenv virtualenvwrapper; \
-	    virtualenv venv --python=$(PYTHON_INTERPRETER); \
-	)
-
-# Define utility variable to help calling Python from the virtual environment
 ACTIVATE_ENV := source venv/bin/activate
 
-# Execute python related functionalities from within the project's environment
 define execute_in_env
 	$(ACTIVATE_ENV) && $1
 endef
+
+## Create python interpreter environment.
+create-environment:
+	$(PYTHON_INTERPRETER) -m venv venv
+
+# Define utility variable to help calling Python from the virtual environment
+
+# Execute python related functionalities from within the project's environment
 
 requirements-ingest:
 	$(call execute_in_env, $(PIP) install boto3 -t ./deployment-packages/layer-ingest/python/)
@@ -56,16 +47,16 @@ flake:
 	$(call execute_in_env, $(PIP) install flake8)
 
 pytest:
-	$(call execute_in_env, $(PIP) install pytest)
-	$(call execute_in_env, $(PIP) install moto)
-	$(call execute_in_env, $(PIP) install boto3)
-	$(call execute_in_env, $(PIP) install pg8000)
+	$(call execute_in_env, $(PIP) install pytest moto boto3 pg8000)
 
 coverage:
 	$(call execute_in_env, $(PIP) install pytest-cov)
 
+black:
+	$(call execute_in_env, $(PIP) install black)
+
 ## Set up dev requirements (bandit, safety, black, flake)
-dev-setup: bandit safety flake pytest coverage
+dev-setup: bandit safety flake pytest coverage black
 
 # Build / Run
 
@@ -86,10 +77,13 @@ run-flake:
 unit-test:
 	$(call execute_in_env, PYTHONPATH=${PYTHONPATH} pytest -vv)
 
+run-black:
+	$(call execute_in_env, PYTHONPATH=${PYTHONPATH} black .)
+
 ## Run the coverage check
 check-coverage:
 	$(call execute_in_env, PYTHONPATH=${PYTHONPATH} pytest --cov=src test/)
 
 # Run all checks
-# run-checks: run-black run-flake unit-test check-coverage
+# run-checks: run-black run-flake unit-test check-coverage run-black
 run-checks: run-flake unit-test check-coverage
