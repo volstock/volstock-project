@@ -36,7 +36,7 @@ class TestLambdaHandler(unittest.TestCase):
         response = get_secrets(sm)
         expected_secrets = ["test_db", "test_host", "test_user", "test_pass"]
         
-        for stored_secret in response:
+        for stored_secret in response.values():
             self.assertIn(stored_secret, expected_secrets)
 
     
@@ -44,44 +44,19 @@ class TestLambdaHandler(unittest.TestCase):
     @patch('pg8000.native.Connection')
     @patch('src.extract.get_secrets')
     def test_database_called_with_correct_keyword_arguments(self, mock_get_secrets, mock_pg_connection, mock_boto_client):
-        #arrange
-        ## mock secret manager so that dummy secrets are passed to a fake secret manager client    
-        
         mock_sm_client = MagicMock()
         mock_boto_client.return_value = mock_sm_client
         mock_get_secrets.return_value = {
+            "database": "test_db",
             "host": "test_host",
             "user": "test_user",
-            "password": "test_password",
-            "dbname": "test_db"
+            "password": "test_password"
          }
         mock_pg_connection.return_value = MagicMock()
-
-        #act 
         connection = get_connection()
-        
-        #mock pg8000.native.Connection so that it does not attempt to connect to a database. We do want it to remember what arguments were passed it though, so we can assert this later on.
 
-        #assert
         mock_pg_connection.assert_called_once_with(
             database="test_db",
             host="test_host",
             user="test_user",
-            password="test_pass")
-        
-     
-        #mock pg8000.native.Connection LOC 48
-        ##provide secrets 
-        ###assert that mock pg8000.native.Connection was called with 
-        #    database="test_db",
-        #     host="test_host",
-        #     user="test_user",
-        #     password="test_pass"
-        
-        # mock_pg_connection.assert_called_once_with(
-        #     database="test_db",
-        #     host="test_host",
-        #     user="test_user",
-        #     password="test_pass"
-        # 
-
+            password="test_password")

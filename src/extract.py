@@ -39,13 +39,17 @@ def get_secrets(sm):
     host = sm.get_secret_value(SecretId="db_host")["SecretString"]
     user = sm.get_secret_value(SecretId="db_user")["SecretString"]
     password = sm.get_secret_value(SecretId="db_pass")["SecretString"]
-    return database, host, user, password
-
+    return {
+        "database": database,
+        "host": host,
+        "user": user,
+        "password": password
+    }
 
 def get_connection():
     try:
         sm = boto3.client("secretsmanager", region_name="eu-west-2")
-        return pg8000.native.Connection(get_secrets(sm))
+        return pg8000.native.Connection(**get_secrets(sm))
     except ClientError as e:
         raise IngestError(f"Failed to retrieve secrets. {e}")
     except DatabaseError as e:
