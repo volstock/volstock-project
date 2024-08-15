@@ -33,7 +33,7 @@ class TestLambdaHandler(unittest.TestCase):
             "password": "test_password"
          }
         mock_pg_conn.return_value = MagicMock()
-        connection = get_connection()
+        get_connection()
 
         mock_pg_conn.assert_called_once_with(
             database="test_db",
