@@ -85,5 +85,5 @@ check-coverage:
 	$(call execute_in_env, PYTHONPATH=${PYTHONPATH} pytest --cov=src test/)
 
 # Run all checks
-# run-checks: run-black run-flake unit-test check-coverage
+# run-checks: run-black run-flake unit-test check-coverage run-black
 run-checks: run-flake unit-test check-coverage run-black
