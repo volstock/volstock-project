@@ -4,6 +4,7 @@ import boto3
 from moto import mock_aws
 from unittest.mock import patch
 from src.extract import (
+    get_bucket_name,
     get_dict_table,
     is_bucket_empty,
     store_table_in_bucket,
@@ -32,6 +33,16 @@ def s3(aws_credentials):
 
 S3_MOCK_BUCKET_NAME = "mock-bucket-1"
 S3_MOCK_BUCKET_WRONG_NAME = "wrong-mock-bucket-1"
+
+
+@patch.dict("os.environ", {"S3_INGEST_BUCKET": S3_MOCK_BUCKET_NAME})
+def test_get_bucket_name():
+    assert get_bucket_name() == S3_MOCK_BUCKET_NAME
+
+
+def test_get_bucket_name_error():
+    with pytest.raises(IngestError):
+        get_bucket_name()
 
 
 @pytest.fixture(scope="function")
@@ -76,20 +87,37 @@ def test_is_bucket_empty_error(s3, s3_bucket):
 
 class MockConnection:
     def __init__(
-        self, database="db", host="localhost", user="user", password="pass"
+            self, database="db", host="localhost", user="user", password="pass"
     ):
-        self.table = {"name": "mock-db-table", "values": [["A", 1], ["B", 2]]}
-        self.columns = [{"name": "c1"}, {"name": "c2"}]
+        self.tables = [
+            {
+                "name": "mock-db-table-1",
+                "columns": [{"name": "c1"}, {"name": "c2"}],
+                "rows": [["A", 1], ["B", 2]],
+            },
+            {
+                "name": "mock-db-table-2",
+                "columns": [{"name": "c1"}, {"name": "c2"}],
+                "rows": [["X", 3], ["Y", 4]],
+            },
+        ]
+        self._select_table = self.tables[0]
+
+    @property
+    def columns(self):
+        return self._select_table["columns"]
 
     def run(self, query):
-        if query[14:] != self.table["name"]:
-            raise DatabaseError("Wrong table name")
-        return self.table["values"]
+        for table in self.tables:
+            if table["name"] == query[14:]:
+                self._select_table = table
+                return self._select_table["rows"]
+        raise DatabaseError("Wrong table name")
 
 
 @patch("pg8000.native.Connection", new_callable=MockConnection)
 def test_get_dict_table(mock_conn):
-    result = get_dict_table(mock_conn, "mock-db-table")
+    result = get_dict_table(mock_conn, "mock-db-table-1")
     assert result == {"c1": ["A", "B"], "c2": [1, 2]}
 
 
@@ -133,9 +161,7 @@ def test_archive_tables(s3, s3_bucket):
         "2024-01-01",
         s3,
     )
-    (_, keys, prefix) = is_bucket_empty(
-        S3_MOCK_BUCKET_NAME, s3
-    )
+    (_, keys, prefix) = is_bucket_empty(S3_MOCK_BUCKET_NAME, s3)
     archive_tables(S3_MOCK_BUCKET_NAME, keys, prefix, s3)
     objects = s3.list_objects_v2(
         Bucket=S3_MOCK_BUCKET_NAME, Prefix=f"{prefix}"
