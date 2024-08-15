@@ -1,14 +1,13 @@
-#This workflow only happens when code is pushed into the main branch. It will test and deploy your code to AWS.
 
-name: Test & Deploy
+name: Test-and-deploy
 on:
   push:
     branches:
-      - main
+      - '*'
 
 jobs:
   run-tests:
-    name: run-tests
+    name: Run Tests
     runs-on: ubuntu-latest
     steps: 
       - name: Checkout Repo
@@ -25,10 +24,9 @@ jobs:
         run: make security-test
       - name: Run Tests
         run: make run-checks
-      
 
   terraform-pipeline:
-    name: terraform-pipeline
+    name: Terraform Pipeline
     runs-on: ubuntu-latest
     needs: run-tests
     steps: 
@@ -49,5 +47,6 @@ jobs:
         working-directory: ./terraform
         run: terraform plan
       - name: Apply
+        if: ${{ github.ref == 'refs/heads/main' }}
         working-directory: ./terraform
         run: terraform apply --auto-approve
