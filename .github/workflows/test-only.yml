@@ -1,10 +1,9 @@
-#This workflow only happens when code is pushed into the main branch. It will test and deploy your code to AWS.
+#This code will run on all branches EXCEPT main. It will run checks on your code and check the terraform files using terraform plan
 
 name: Test & Deploy
-
 on:
   push:
-    branches:
+    branches-ignore:
       - main
 
 jobs:
@@ -49,6 +48,6 @@ jobs:
       - name: Plan
         working-directory: ./terraform
         run: terraform plan
-      - name: Apply
-        working-directory: ./terraform
-        run: terraform apply --auto-approve
+
+#when we push this code, test-only.yml should happen
+#then make a tiny change to main and verify test-and-deploy.yml happens
