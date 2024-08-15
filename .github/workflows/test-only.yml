@@ -48,6 +48,3 @@ jobs:
       - name: Plan
         working-directory: ./terraform
         run: terraform plan
-
-#when we push this code, test-only.yml should happen
-#then make a tiny change to main and verify test-and-deploy.yml happens
