@@ -46,15 +46,23 @@ def get_bucket_name():
         raise IngestError(f"Failed to get env bucket name. {e}")
 
 
+def get_secrets(sm):
+    database = sm.get_secret_value(SecretId="db_name")["SecretString"]
+    host = sm.get_secret_value(SecretId="db_host")["SecretString"]
+    user = sm.get_secret_value(SecretId="db_user")["SecretString"]
+    password = sm.get_secret_value(SecretId="db_pass")["SecretString"]
+    return {
+        "database": database,
+        "host": host,
+        "user": user,
+        "password": password
+    }
+
+
 def get_connection():
     try:
         sm = boto3.client("secretsmanager", region_name="eu-west-2")
-        return pg8000.native.Connection(
-            database=sm.get_secret_value(SecretId="db_name")["SecretString"],
-            host=sm.get_secret_value(SecretId="db_host")["SecretString"],
-            user=sm.get_secret_value(SecretId="db_user")["SecretString"],
-            password=sm.get_secret_value(SecretId="db_pass")["SecretString"],
-        )
+        return pg8000.native.Connection(**get_secrets(sm))
     except ClientError as e:
         raise IngestError(f"Failed to retrieve secrets. {e}")
     except DatabaseError as e:
