@@ -47,16 +47,11 @@ def get_bucket_name():
 
 
 def get_secrets(sm):
-    database = sm.get_secret_value(SecretId="db_name")["SecretString"]
+    db = sm.get_secret_value(SecretId="db_name")["SecretString"]
     host = sm.get_secret_value(SecretId="db_host")["SecretString"]
     user = sm.get_secret_value(SecretId="db_user")["SecretString"]
     password = sm.get_secret_value(SecretId="db_pass")["SecretString"]
-    return {
-        "database": database,
-        "host": host,
-        "user": user,
-        "password": password
-    }
+    return {"database": db, "host": host, "user": user, "password": password}
 
 
 def get_connection():
@@ -124,7 +119,10 @@ def archive_tables(
 
 
 def store_table_in_bucket(
-    bucket, dict_table, table_name, date,
+    bucket,
+    dict_table,
+    table_name,
+    date,
     s3=boto3.client("s3", region_name="eu-west-2")
 ):
     try:
