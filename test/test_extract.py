@@ -14,6 +14,7 @@ from src.extract import (
     is_bucket_empty,
     store_table_in_bucket,
     archive_tables,
+    lambda_handler,
     IngestError,
     DatabaseError,
 )
@@ -27,6 +28,24 @@ def aws_credentials():
     os.environ["AWS_SECURITY_TOKEN"] = "testing"
     os.environ["AWS_SESSION_TOKEN"] = "testing"
     os.environ["AWS_DEFAULT_REGION"] = "eu-west-2"
+
+@pytest.fixture(scope="function")
+def lambda_event():
+    return {
+        "key1": "value1",
+        "key2": "value2",
+        "key3": "value3"
+    }
+
+@pytest.fixture(scope="function") #Test if we can remove as never seen this before
+def lambda_context():
+    class Context:
+        function_name = "test_lambda"
+        memory_limit_in_mb = 128
+        function_version = "1"
+        invoked_function_arn = "arn:aws:lambda:aws-region:acct-id:function:test_lambda"
+        aws_request_id = "test_request_id"
+    return Context()
 
 
 @pytest.fixture(scope="function")
@@ -84,7 +103,6 @@ class TestConnection:
             password="test_password",
         )
 
-
 class TestGetBucketName:
 
     @patch.dict("os.environ", {"S3_INGEST_BUCKET": S3_MOCK_BUCKET_NAME})
@@ -96,7 +114,6 @@ class TestGetBucketName:
             get_bucket_name()
         assert str(e.value) == \
             "Failed to get env bucket name. 'S3_INGEST_BUCKET'"
-
 
 class TestIsBucketEmpty:
 
@@ -134,6 +151,42 @@ class TestIsBucketEmpty:
             " The specified bucket does not exist"
         )
 
+class TestGetTableNames:
+
+    def test_get_table_names(self):
+        conn = MagicMock()
+        conn.run.return_value = [["t1"], ["t2"], ["t3"], ["t4"]]
+        assert get_table_names(conn) == ["t1", "t2", "t3", "t4"]
+
+        conn.run.return_value = [["_t1"], ["t2"], ["_t3"], ["t4"]]
+        assert get_table_names(conn) == ["t2", "t4"]
+
+    def test_get_table_names_error(self):
+        conn = MagicMock()
+        conn.run.side_effect = DatabaseError("Mock DB error")
+        with pytest.raises(IngestError) as e:
+            get_table_names(conn)
+        assert str(e.value) == "Failed to get table names. Mock DB error"
+
+class TestArchiveTables:
+
+    def test_archive_tables(self, s3, s3_bucket):
+        store_table_in_bucket(
+            S3_MOCK_BUCKET_NAME,
+            {"c1": [1, 2], "c2": ["A", "B"]},
+            "mock-db-table",
+            "2024-01-01",
+            s3,
+        )
+        (_, keys, prefix) = is_bucket_empty(S3_MOCK_BUCKET_NAME, s3)
+        archive_tables(S3_MOCK_BUCKET_NAME, keys, prefix, s3)
+        objects = s3.list_objects_v2(Bucket=S3_MOCK_BUCKET_NAME, Prefix=f"{prefix}")
+        assert "Contents" not in objects
+
+        objects = s3.list_objects_v2(Bucket=S3_MOCK_BUCKET_NAME, Prefix="archive/")
+        assert "Contents" in objects
+        keys = [obj["Key"][8:] for obj in objects["Contents"]]
+        assert keys == ["2024-01-01/mock-db-table.json"]
 
 class TestGetDictTable:
     @patch("pg8000.native.Connection")
@@ -149,7 +202,6 @@ class TestGetDictTable:
         with pytest.raises(IngestError) as e:
             get_dict_table(mock_conn, "mock-wrong-db-table")
         assert str(e.value) == "Failed to get table values, Mock DB error"
-
 
 class TestStoreTableInBucket:
     def test_store_table_in_bucket(self, s3, s3_bucket):
@@ -181,41 +233,38 @@ class TestStoreTableInBucket:
             "bucket does not exist"
         )
 
+class TestLambdasHandler:
+    @patch("src.extract.get_bucket_name")
+    @patch("src.extract.get_connection")
+    @patch("src.extract.is_bucket_empty")
+    @patch("src.extract.get_table_names")
+    @patch("src.extract.archive_tables")
+    @patch("src.extract.get_dict_table")
+    @patch("src.extract.store_table_in_bucket")
+    def test_lambda_handler_when_given_correct_inputs(
+        self,
+        mock_store_table_in_bucket,
+        mock_get_dict_table,
+        mock_archive_tables,
+        mock_get_table_names,
+        mock_is_bucket_empty,
+        mock_get_connection,
+        mock_get_bucket_name,
+        lambda_event,
+        lambda_context
+    ):
+        mock_get_bucket_name.return_value = "test-bucket"
+        mock_get_connection.return_value = MagicMock()
+        mock_is_bucket_empty.return_value = (False, ["test-key"], "latest/")
+        mock_get_table_names.return_value = ["table1", "table2"]
+        mock_get_dict_table.side_effect = [{"col1": [1, 2]}, {"col2": [3, 4]}]
+        
+        response = lambda_handler(lambda_event, lambda_context)
+        
+        assert response == {"msg": "Ingestion successfull"}
+        
 
-class TestArchiveTables:
-
-    def test_archive_tables(self, s3, s3_bucket):
-        store_table_in_bucket(
-            S3_MOCK_BUCKET_NAME,
-            {"c1": [1, 2], "c2": ["A", "B"]},
-            "mock-db-table",
-            "2024-01-01",
-            s3,
-        )
-        (_, keys, prefix) = is_bucket_empty(S3_MOCK_BUCKET_NAME, s3)
-        archive_tables(S3_MOCK_BUCKET_NAME, keys, prefix, s3)
-        objects = s3.list_objects_v2(Bucket=S3_MOCK_BUCKET_NAME, Prefix=f"{prefix}")
-        assert "Contents" not in objects
-
-        objects = s3.list_objects_v2(Bucket=S3_MOCK_BUCKET_NAME, Prefix="archive/")
-        assert "Contents" in objects
-        keys = [obj["Key"][8:] for obj in objects["Contents"]]
-        assert keys == ["2024-01-01/mock-db-table.json"]
 
 
-class TestGetTableNames:
 
-    def test_get_table_names(self):
-        conn = MagicMock()
-        conn.run.return_value = [["t1"], ["t2"], ["t3"], ["t4"]]
-        assert get_table_names(conn) == ["t1", "t2", "t3", "t4"]
 
-        conn.run.return_value = [["_t1"], ["t2"], ["_t3"], ["t4"]]
-        assert get_table_names(conn) == ["t2", "t4"]
-
-    def test_get_table_names_error(self):
-        conn = MagicMock()
-        conn.run.side_effect = DatabaseError("Mock DB error")
-        with pytest.raises(IngestError) as e:
-            get_table_names(conn)
-        assert str(e.value) == "Failed to get table names. Mock DB error"
