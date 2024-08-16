@@ -31,9 +31,6 @@ def lambda_handler(event, context):
         response = {"msg": "Failed to ingest data", "err": str(e)}
         logging.critical(response)
         return response
-    except Exception as e:
-        logging.critical(f"Unexpected error: {e}")
-        return {"msg": "Unexpected error occurred", "err": str(e)}
     finally:
         try:
             conn.close()
