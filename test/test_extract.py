@@ -1,9 +1,13 @@
-import pytest
-import os
 import boto3
+import json
 from moto import mock_aws
+import os
+import pytest
+import unittest
 from unittest.mock import patch, MagicMock
 from src.extract import (
+    get_secrets,
+    get_connection,
     get_bucket_name,
     get_dict_table,
     get_table_names,
@@ -11,9 +15,8 @@ from src.extract import (
     store_table_in_bucket,
     archive_tables,
     IngestError,
-    DatabaseError,
+    DatabaseError
 )
-import json
 
 
 @pytest.fixture(scope="function")
@@ -53,6 +56,43 @@ def s3_bucket(s3):
         Bucket=S3_MOCK_BUCKET_NAME,
         CreateBucketConfiguration={"LocationConstraint": "eu-west-2"},
     )
+
+
+@mock_aws
+def test_get_secrets_from_sm():
+    sm = boto3.client("secretsmanager", region_name="eu-west-2")
+
+    sm.create_secret(Name="db_name", SecretString="test_db")
+    sm.create_secret(Name="db_host", SecretString="test_host")
+    sm.create_secret(Name="db_user", SecretString="test_user")
+    sm.create_secret(Name="db_pass", SecretString="test_pass")
+
+    response = get_secrets(sm)
+    expected_secrets = ["test_db", "test_host", "test_user", "test_pass"]
+    for stored_secret in response.values():
+        unittest.TestCase().assertIn(stored_secret, expected_secrets)
+
+
+@patch('boto3.client')
+@patch('pg8000.native.Connection')
+@patch('src.extract.get_secrets')
+def test_db_params_cll(mock_get_secrets, mock_pg_conn, mock_boto_ct):
+    mock_sm_client = MagicMock()
+    mock_boto_ct.return_value = mock_sm_client
+    mock_get_secrets.return_value = {
+        "database": "test_db",
+        "host": "test_host",
+        "user": "test_user",
+        "password": "test_password"
+        }
+    mock_pg_conn.return_value = MagicMock()
+    get_connection()
+
+    mock_pg_conn.assert_called_once_with(
+        database="test_db",
+        host="test_host",
+        user="test_user",
+        password="test_password")
 
 
 def test_is_bucket_empty_empty(s3, s3_bucket):
