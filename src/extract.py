@@ -93,7 +93,7 @@ def lambda_handler(event, context):
                 dict_table = get_dict_table(conn, table_name)
                 store_table_in_bucket(S3_INGEST_BUCKET, dict_table, table_name, date)
         conn.close()
-        return {"msg": "Ingestion successfull"}
+        return {"msg": "Ingestion successful"}
     except IngestError as e:
         response = {"msg": "Failed to ingest data", "err": str(e)}
         logging.critical(response)
@@ -161,7 +161,7 @@ def get_connection():
         return pg8000.native.Connection(**get_secrets(sm))
     except ClientError as e:
         raise IngestError(f"Failed to retrieve secrets. {e}")
-    except DatabaseError as e:
+    except Exception as e:
         raise IngestError(f"Failed to connect to database. {e}")
 
 

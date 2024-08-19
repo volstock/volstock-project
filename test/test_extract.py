@@ -96,6 +96,104 @@ class TestConnection:
             password="test_password",
         )
 
+    @patch("src.extract.get_secrets")
+    @patch("pg8000.native.Connection")
+    @patch("boto3.client")
+    def test_db_params_cll_exception(self, mock_boto_ct, mock_pg_conn, mock_get_secrets):
+        mock_sm_client = MagicMock()
+        mock_boto_ct.return_value = mock_sm_client
+        mock_get_secrets.return_value = {
+            "database": "test_db",
+            "host": "test_host",
+            "user": "test_user",
+            "password": "test_password",
+        }
+        mock_pg_conn.side_effect = Exception("Connection failed")
+
+        with pytest.raises(IngestError) as e:
+            get_connection()
+        assert str(e.value) == "Failed to connect to database. Connection failed"
+
+
+
+#~ø† working
+    @patch.dict(os.environ, {"S3_INGEST_BUCKET": "mock-bucket"})
+    @patch("src.extract.get_connection")
+    @patch("src.extract.get_table_names")
+    @patch("src.extract.is_bucket_empty")
+    @patch("src.extract.get_date")
+    @patch("boto3.client")
+    def test_lambda_handler_success(
+        self,
+        mock_boto_client,
+        mock_get_date,
+        mock_is_bucket_empty,
+        mock_get_table_names,
+        mock_get_connection,
+    ):
+        mock_s3_client = MagicMock()
+        mock_boto_client.return_value = mock_s3_client
+        mock_get_connection.return_value = MagicMock()
+        mock_is_bucket_empty.return_value = False
+        mock_get_table_names.return_value = ["table1", "table2"]
+        mock_get_date.return_value = "2024-01-01"
+        mock_s3_client.copy_object.return_value = {}
+        mock_s3_client.get_object.return_value = {
+            "Body": MagicMock(read=lambda: b'{"created_at": "2024-01-01"}')
+        }
+
+        result = lambda_handler({}, {})
+        assert result == {"msg": "Ingestion successful"}
+
+
+
+
+    @patch("src.extract.get_connection")
+    def test_lambda_handler_missing_env_var(self, mock_get_connection):
+        if "S3_INGEST_BUCKET" in os.environ:
+            del os.environ["S3_INGEST_BUCKET"]
+
+        result = lambda_handler({}, {})
+
+        assert result == {
+            "msg": "Failed to ingest data",
+            "err": "Failed to get env bucket name. 'S3_INGEST_BUCKET'"
+        }
+
+    @patch.dict(os.environ, {"S3_INGEST_BUCKET": "mock-bucket"})
+    @patch("src.extract.get_connection")
+    @patch("src.extract.get_table_names")
+    @patch("src.extract.is_bucket_empty")
+    @patch("src.extract.get_date")
+    def test_lambda_handler_with_failing_dependencies(
+        self,
+        mock_get_date,
+        mock_is_bucket_empty,
+        mock_get_table_names,
+        mock_get_connection,
+    ):
+        mock_get_connection.side_effect = IngestError("Connection failed")
+        mock_is_bucket_empty.return_value = True
+        mock_get_table_names.return_value = ["table1", "table2"]
+        mock_get_date.return_value = "2024-01-01"
+
+        result = lambda_handler({}, {})
+
+        assert result == {
+            "msg": "Failed to ingest data",
+            "err": "Connection failed",
+        }
+
+    @patch("pg8000.native.Connection")
+    def test_update_dict_table_empty_db_response(self, mock_conn, s3, s3_bucket):
+        mock_dict_table = {"created_at": ["2024-01-01"]}
+        store_table_in_bucket(S3_MOCK_BUCKET_NAME, mock_dict_table, "mock-table", "2024-01-01")
+
+        mock_conn.run.return_value = []
+        result = update_dict_table(S3_MOCK_BUCKET_NAME, "mock-table", "2024-01-01", mock_conn)
+        assert not result[0]
+        assert result[1] == mock_dict_table
+
 
 class TestGetBucketName:
 
@@ -376,9 +474,9 @@ def test_lambda_handler(
     aws_credentials,
 ):
     mock_is_bucket_empty.return_value = True
-    assert lambda_handler("", "") == {"msg": "Ingestion successfull"}
+    assert lambda_handler("", "") == {"msg": "Ingestion successful"}
     mock_is_bucket_empty.return_value = False
-    assert lambda_handler("", "") == {"msg": "Ingestion successfull"}
+    assert lambda_handler("", "") == {"msg": "Ingestion successful"}
     mock_conn.side_effect = IngestError("Connection mocked exception")
     error_response = lambda_handler("", "")
     assert error_response == {
@@ -386,12 +484,12 @@ def test_lambda_handler(
         "err": "Connection mocked exception",
     }
     mock_logging.assert_called_once_with(error_response)
-        
+
 
 class TestFormatDate:
     def test_correct_file_formatting_based_on_GMT(self):
         fake_datetime_object = datetime(2024, 8, 19, 9, 30)
-        
+
         result = format_date(fake_datetime_object)
-        
+
         assert result == '2024-08-19 09:30'
