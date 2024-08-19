@@ -1,4 +1,5 @@
 import boto3
+from datetime import datetime
 import json
 from moto import mock_aws
 import os
@@ -6,6 +7,7 @@ import pytest
 import unittest
 from unittest.mock import patch, MagicMock
 from src.extract import (
+    format_date,
     get_secrets,
     get_connection,
     get_bucket_name,
@@ -264,7 +266,10 @@ class TestLambdasHandler:
         assert response == {"msg": "Ingestion successfull"}
         
 
-
-
-
-
+class TestFormatDate:
+    def test_correct_file_formatting_based_on_GMT(self):
+        fake_datetime_object = datetime(2024, 8, 19, 9, 30)
+        
+        result = format_date(fake_datetime_object)
+        
+        assert result == '2024-08-19 09:30'
