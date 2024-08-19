@@ -13,7 +13,7 @@ from src.extract import (
     get_table_names,
     is_bucket_empty,
     store_table_in_bucket,
-    archive_tables,
+    copy_table,
     lambda_handler,
     IngestError,
     DatabaseError,
@@ -119,7 +119,7 @@ class TestIsBucketEmpty:
 
     def test_is_an_empty_bucket_empty(self, s3, s3_bucket):
         result = is_bucket_empty(S3_MOCK_BUCKET_NAME, s3)
-        assert result == (True, [], "latest/")
+        assert result == True
 
     def test_is_bucket_empty_not_empty(self, s3, s3_bucket):
         s3.put_object(
@@ -128,19 +128,7 @@ class TestIsBucketEmpty:
             Key="latest/mock-date/mock-table.json",
         )
         result = is_bucket_empty(S3_MOCK_BUCKET_NAME, s3)
-        assert result == (False, ["mock-date/mock-table.json"], "latest/")
-
-        s3.put_object(
-            Body=b"More mock bytes",
-            Bucket=S3_MOCK_BUCKET_NAME,
-            Key="latest/mock-date/mock-table-2.json",
-        )
-        result = is_bucket_empty(S3_MOCK_BUCKET_NAME, s3)
-        assert result == (
-            False,
-            ["mock-date/mock-table-2.json", "mock-date/mock-table.json"],
-            "latest/",
-        )
+        assert result == False
 
     def test_is_bucket_empty_error(self, s3, s3_bucket):
         with pytest.raises(IngestError) as e:
@@ -168,25 +156,37 @@ class TestGetTableNames:
             get_table_names(conn)
         assert str(e.value) == "Failed to get table names. Mock DB error"
 
-class TestArchiveTables:
 
-    def test_archive_tables(self, s3, s3_bucket):
-        store_table_in_bucket(
+class TestCopyTable:
+
+    def test_copy_table(self, s3, s3_bucket):
+        s3.put_object(
+            Body=b"Mock bytes",
+            Bucket=S3_MOCK_BUCKET_NAME,
+            Key="latest/mock-date-1/mock-table.json",
+        )
+
+        copy_table(
             S3_MOCK_BUCKET_NAME,
-            {"c1": [1, 2], "c2": ["A", "B"]},
-            "mock-db-table",
-            "2024-01-01",
+            "latest/mock-date-1/mock-table.json",
+            "latest/mock-date-2/mock-table.json",
             s3,
         )
-        (_, keys, prefix) = is_bucket_empty(S3_MOCK_BUCKET_NAME, s3)
-        archive_tables(S3_MOCK_BUCKET_NAME, keys, prefix, s3)
-        objects = s3.list_objects_v2(Bucket=S3_MOCK_BUCKET_NAME, Prefix=f"{prefix}")
-        assert "Contents" not in objects
 
-        objects = s3.list_objects_v2(Bucket=S3_MOCK_BUCKET_NAME, Prefix="archive/")
-        assert "Contents" in objects
-        keys = [obj["Key"][8:] for obj in objects["Contents"]]
-        assert keys == ["2024-01-01/mock-db-table.json"]
+        object = s3.get_object(
+            Bucket=S3_MOCK_BUCKET_NAME, Key="latest/mock-date-2/mock-table.json"
+        )
+        assert object["Body"].read().decode() == "Mock bytes"
+
+
+    def test_copy_table_error(self, s3, s3_bucket):
+        with pytest.raises(IngestError) as e:
+            copy_table(S3_MOCK_BUCKET_WRONG_NAME, "s", "d", s3)
+        assert (
+            str(e.value) == "Failed to copy table. An error occurred "
+            "(NoSuchBucket) when calling the CopyObject operation: The specified "
+            "bucket does not exist"
+        )
 
 class TestGetDictTable:
     @patch("pg8000.native.Connection")
@@ -262,9 +262,3 @@ class TestLambdasHandler:
         response = lambda_handler(lambda_event, lambda_context)
         
         assert response == {"msg": "Ingestion successfull"}
-        
-
-
-
-
-
