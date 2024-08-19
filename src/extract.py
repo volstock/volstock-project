@@ -60,7 +60,7 @@ def lambda_handler(event, context):
         conn = get_connection()
         is_empty = is_bucket_empty(S3_INGEST_BUCKET)
         tables = get_table_names(conn)
-        date = datetime.now().isoformat()
+        date = format_date(datetime.now())
         latest_date = get_date(S3_INGEST_BUCKET)
         if not is_empty:
             for table_name in tables:
@@ -103,6 +103,10 @@ def lambda_handler(event, context):
             conn.close()
         except UnboundLocalError:
             pass
+
+
+def format_date(current_time):
+    return current_time.strftime('%Y-%m-%d %H:%M')
 
 
 def get_bucket_name():
