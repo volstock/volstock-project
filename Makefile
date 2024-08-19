@@ -22,10 +22,7 @@ endef
 create-environment:
 	$(PYTHON_INTERPRETER) -m venv venv
 
-# Define utility variable to help calling Python from the virtual environment
-
 # Execute python related functionalities from within the project's environment
-
 requirements-ingest:
 	$(call execute_in_env, $(PIP) install boto3 -t ./deployment-packages/layer-ingest/python/ --upgrade)
 	$(call execute_in_env, $(PIP) install pg8000 -t ./deployment-packages/layer-ingest/python/ --upgrade)
@@ -52,10 +49,8 @@ pytest:
 coverage:
 	$(call execute_in_env, $(PIP) install pytest-cov)
 
-black:
-	$(call execute_in_env, $(PIP) install black)
 
-## Set up dev requirements (bandit, safety, black, flake)
+## Set up dev requirements (bandit, safety, flake)
 dev-setup: bandit safety flake pytest coverage black
 
 # Build / Run
@@ -77,13 +72,10 @@ run-flake:
 unit-test:
 	$(call execute_in_env, PYTHONPATH=${PYTHONPATH} pytest -vv)
 
-run-black:
-	$(call execute_in_env, PYTHONPATH=${PYTHONPATH} black .)
 
 ## Run the coverage check
 check-coverage:
 	$(call execute_in_env, PYTHONPATH=${PYTHONPATH} pytest --cov=src test/)
 
 # Run all checks
-# run-checks: run-black run-flake unit-test check-coverage run-black
 run-checks: run-flake unit-test check-coverage
