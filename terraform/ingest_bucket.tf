@@ -23,7 +23,7 @@ resource "aws_s3_object" "ingest_lambda_code" {
 
 data "archive_file" "ingest_lambda_layer" {
   type        = "zip"
-  source_dir  = "${path.module}/../deployment-packages/layer-ingest"
+  source_dir  = "${path.module}/../deployment-packages/ingest-layer"
   output_path = "${path.module}/../deployment-packages/ingest_layer.zip"
 }
 
