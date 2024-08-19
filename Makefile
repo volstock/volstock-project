@@ -27,6 +27,9 @@ requirements-ingest:
 	$(call execute_in_env, $(PIP) install boto3 -t ./deployment-packages/layer-ingest/python/ --upgrade)
 	$(call execute_in_env, $(PIP) install pg8000 -t ./deployment-packages/layer-ingest/python/ --upgrade)
 
+requirements-process:
+	$(call execute_in_env, $(PIP) install boto3 -t ./deployment-packages/layer-process/python/ --upgrade)
+
 requirements: create-environment requirements-ingest
 
 ################################################################################################################

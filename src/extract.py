@@ -51,9 +51,8 @@ def lambda_handler(event, context):
             store_date_in_bucket(S3_INGEST_BUCKET, date)
             for table_name in tables:
                 dict_table = get_dict_table(conn, table_name)
-                store_table_in_bucket(
-                    S3_INGEST_BUCKET, dict_table, table_name, date
-                )
+                store_table_in_bucket(S3_INGEST_BUCKET, dict_table, table_name, date)
+        conn.close()
         return {"msg": "Ingestion successfull"}
     except IngestError as e:
         response = {"msg": "Failed to ingest data", "err": str(e)}
@@ -119,8 +118,9 @@ def get_dict_table(conn, table):
         raise IngestError(f"Failed to get table values, {e}")
 
 
-def is_bucket_empty(bucket, s3=boto3.client("s3", region_name="eu-west-2")):
+def is_bucket_empty(bucket):
     try:
+        s3 = boto3.client("s3", region_name="eu-west-2")
         objects = s3.list_objects_v2(Bucket=bucket, Prefix="latest/")
         if "Contents" not in objects:
             return True
@@ -129,12 +129,9 @@ def is_bucket_empty(bucket, s3=boto3.client("s3", region_name="eu-west-2")):
         raise IngestError(f"Failed to check if bucket is empty. {e}")
 
 
-def delete_table(
-    bucket,
-    key,
-    s3=boto3.client("s3", region_name="eu-west-2"),
-):
+def delete_table(bucket, key):
     try:
+        s3 = boto3.client("s3", region_name="eu-west-2")
         s3.delete_object(Bucket=bucket, Key=f"{key}")
     except ClientError as e:
         raise IngestError(f"Failed to delete table. {e}")
@@ -144,9 +141,9 @@ def copy_table(
     bucket,
     source_key,
     destination_key,
-    s3=boto3.client("s3", region_name="eu-west-2"),
 ):
     try:
+        s3 = boto3.client("s3", region_name="eu-west-2")
         s3.copy_object(
             Bucket=bucket,
             CopySource={"Bucket": bucket, "Key": f"{source_key}"},
@@ -161,9 +158,9 @@ def store_table_in_bucket(
     dict_table,
     table_name,
     date,
-    s3=boto3.client("s3", region_name="eu-west-2"),
 ):
     try:
+        s3 = boto3.client("s3", region_name="eu-west-2")
         s3.put_object(
             Body=json.dumps(dict_table, indent=4, default=str).encode(),
             Bucket=bucket,
@@ -176,9 +173,9 @@ def store_table_in_bucket(
 def store_date_in_bucket(
     bucket,
     date,
-    s3=boto3.client("s3", region_name="eu-west-2"),
 ):
     try:
+        s3 = boto3.client("s3", region_name="eu-west-2")
         s3.put_object(
             Body=date.encode(),
             Bucket=bucket,
@@ -188,8 +185,9 @@ def store_date_in_bucket(
         raise IngestError(f"Failed to store date in bucket. {e}")
 
 
-def get_date(bucket, s3=boto3.client("s3", region_name="eu-west-2")):
+def get_date(bucket):
     try:
+        s3 = boto3.client("s3", region_name="eu-west-2")
         date_object = s3.get_object(Bucket=bucket, Key="latest_date")
         return date_object["Body"].read().decode()
     except ClientError as e:
@@ -201,9 +199,9 @@ def update_dict_table(
     table_name,
     latest_date,
     conn,
-    s3=boto3.client("s3", region_name="eu-west-2"),
 ):
     try:
+        s3 = boto3.client("s3", region_name="eu-west-2")
         table_object = s3.get_object(
             Bucket=bucket, Key=f"latest/{latest_date}/{table_name}.json"
         )
@@ -231,6 +229,3 @@ def update_dict_table(
         return (False, dict_table)
     except Exception as e:
         raise IngestError(f"Failed to update table. {e}")
-
-
-lambda_handler("", "")
