@@ -71,7 +71,7 @@ security-test:
 
 ##Run the flake8 code styler
 run-flake:
-	$(call execute_in_env, flake8 --config=.flake8 ./src/)
+	$(call execute_in_env, flake8 --config=.flake8 ./src/ ./test)
 
 ## Run the unit tests
 unit-test:
@@ -82,4 +82,4 @@ check-coverage:
 	$(call execute_in_env, PYTHONPATH=${PYTHONPATH} pytest --cov=src test/)
 
 # Run all checks
-run-checks: unit-test check-coverage
+run-checks: run-flake unit-test check-coverage

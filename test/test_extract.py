@@ -376,9 +376,9 @@ def test_lambda_handler(
     aws_credentials,
 ):
     mock_is_bucket_empty.return_value = True
-    assert lambda_handler("", "") == {"msg": "Ingestion successfull"}
+    assert lambda_handler("", "") == {"msg": "Ingestion successful"}
     mock_is_bucket_empty.return_value = False
-    assert lambda_handler("", "") == {"msg": "Ingestion successfull"}
+    assert lambda_handler("", "") == {"msg": "Ingestion successful"}
     mock_conn.side_effect = IngestError("Connection mocked exception")
     error_response = lambda_handler("", "")
     assert error_response == {
@@ -386,12 +386,12 @@ def test_lambda_handler(
         "err": "Connection mocked exception",
     }
     mock_logging.assert_called_once_with(error_response)
-        
+
 
 class TestFormatDate:
     def test_correct_file_formatting_based_on_GMT(self):
         fake_datetime_object = datetime(2024, 8, 19, 9, 30)
-        
+
         result = format_date(fake_datetime_object)
-        
-        assert result == '2024-08-19 09:30'
+
+        assert result == "2024-08-19 09:30"
