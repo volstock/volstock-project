@@ -77,9 +77,6 @@ run-flake:
 unit-test:
 	$(call execute_in_env, PYTHONPATH=${PYTHONPATH} pytest -vv)
 
-run-black:
-	$(call execute_in_env, PYTHONPATH=${PYTHONPATH} black .)
-
 ## Run the coverage check
 check-coverage:
 	$(call execute_in_env, PYTHONPATH=${PYTHONPATH} pytest --cov=src test/)
