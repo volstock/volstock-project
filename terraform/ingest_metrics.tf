@@ -1,3 +1,8 @@
+resource "aws_cloudwatch_log_group" "ingest_lambda_log_group" {
+  name = "/aws/lambda/${aws_lambda_function.ingest_lambda.function_name}"
+
+}
+
 resource "aws_sns_topic" "ingest_lambda_critical_error" {
   name = "ingest-lambda-critical-error"
 }
@@ -11,7 +16,7 @@ resource "aws_sns_topic_subscription" "email_ingest_lambda_critical_error" {
 resource "aws_cloudwatch_log_metric_filter" "metric_filter_ingest" {
   name           = "IngestCriticalError"
   pattern        = "CRITICAL"
-  log_group_name = "/aws/lambda/ingest_lambda"
+  log_group_name = aws_cloudwatch_log_group.ingest_lambda_log_group.name
   
   metric_transformation {
     name      = "IngestCriticalErrorCount"

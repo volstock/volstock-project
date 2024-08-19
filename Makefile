@@ -27,10 +27,13 @@ create-environment:
 # Execute python related functionalities from within the project's environment
 
 requirements-ingest:
-	$(call execute_in_env, $(PIP) install boto3 -t ./deployment-packages/layer-ingest/python/ --upgrade)
-	$(call execute_in_env, $(PIP) install pg8000 -t ./deployment-packages/layer-ingest/python/ --upgrade)
+	$(call execute_in_env, $(PIP) install boto3 -t ./deployment-packages/ingest-layer/python/ --upgrade)
+	$(call execute_in_env, $(PIP) install pg8000 -t ./deployment-packages/ingest-layer/python/ --upgrade)
 
-requirements: create-environment requirements-ingest
+requirements-process:
+	$(call execute_in_env, $(PIP) install boto3 -t ./deployment-packages/process-layer/python/ --upgrade)
+
+requirements: create-environment requirements-ingest requirements-process
 
 ################################################################################################################
 # Set Up
@@ -64,8 +67,10 @@ dev-setup: bandit safety flake pytest coverage black
 security-test:
 	$(call execute_in_env, $(PIP) freeze > ./requirements.txt)
 	$(call execute_in_env, $(PIP) freeze --path ./deployment-packages/layer-ingest/python/ > ./requirements-ingest.txt)
+	$(call execute_in_env, $(PIP) freeze --path ./deployment-packages/layer-process/python/ > ./requirements-process.txt)
 	$(call execute_in_env, safety check -r ./requirements.txt)
 	$(call execute_in_env, safety check -r ./requirements-ingest.txt)
+	$(call execute_in_env, safety check -r ./requirements-process.txt)
 	$(call execute_in_env, bandit -lll ./src/ ./test/)
 
 
