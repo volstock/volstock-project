@@ -160,7 +160,7 @@ def get_connection():
         return pg8000.native.Connection(**get_secrets(sm))
     except ClientError as e:
         raise IngestError(f"Failed to retrieve secrets. {e}")
-    except DatabaseError as e:
+    except Exception as e:
         raise IngestError(f"Failed to connect to database. {e}")
 
 
