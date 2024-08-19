@@ -51,7 +51,7 @@ coverage:
 
 
 ## Set up dev requirements (bandit, safety, flake)
-dev-setup: bandit safety flake pytest coverage black
+dev-setup: bandit safety flake pytest coverage
 
 # Build / Run
 
