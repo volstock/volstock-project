@@ -116,7 +116,6 @@ class TestConnection:
 
 
 
-#~ø† working
     @patch.dict(os.environ, {"S3_INGEST_BUCKET": "mock-bucket"})
     @patch("src.extract.get_connection")
     @patch("src.extract.get_table_names")
@@ -492,4 +491,4 @@ class TestFormatDate:
 
         result = format_date(fake_datetime_object)
 
-        assert result == '2024-08-19 09:30'
+        assert result == "2024-08-19 09:30"
