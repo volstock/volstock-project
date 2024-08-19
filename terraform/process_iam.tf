@@ -1,19 +1,6 @@
-data "aws_iam_policy_document" "trust_policy_process" {
-  statement {
-    effect = "Allow"
-
-    principals {
-      type        = "Service"
-      identifiers = ["lambda.amazonaws.com"]
-    }
-
-    actions = ["sts:AssumeRole"]
-  }
-}
-
 resource "aws_iam_role" "process_lambda_role" {
   name               = "process_lambda_role"
-  assume_role_policy = data.aws_iam_policy_document.trust_policy_process.json
+  assume_role_policy = data.aws_iam_policy_document.trust_policy_lambdas.json
 }
 
 

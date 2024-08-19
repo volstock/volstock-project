@@ -1,4 +1,4 @@
-data "aws_iam_policy_document" "trust_policy" {
+data "aws_iam_policy_document" "trust_policy_lambdas" {
   statement {
     effect = "Allow"
 
@@ -13,7 +13,7 @@ data "aws_iam_policy_document" "trust_policy" {
 
 resource "aws_iam_role" "ingest_lambda_role" {
   name               = "ingest_lambda_role"
-  assume_role_policy = data.aws_iam_policy_document.trust_policy.json
+  assume_role_policy = data.aws_iam_policy_document.trust_policy_lambdas.json
 }
 
 data "aws_caller_identity" "current_account" {}

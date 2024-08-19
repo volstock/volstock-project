@@ -61,8 +61,8 @@ def lambda_handler(event, context):
         is_empty = is_bucket_empty(S3_INGEST_BUCKET)
         tables = get_table_names(conn)
         date = format_date(datetime.now())
-        latest_date = get_date(S3_INGEST_BUCKET)
         if not is_empty:
+            latest_date = get_date(S3_INGEST_BUCKET)
             for table_name in tables:
                 copy_table(
                     S3_INGEST_BUCKET,
@@ -92,8 +92,7 @@ def lambda_handler(event, context):
             for table_name in tables:
                 dict_table = get_dict_table(conn, table_name)
                 store_table_in_bucket(S3_INGEST_BUCKET, dict_table, table_name, date)
-        conn.close()
-        return {"msg": "Ingestion successfull"}
+        return {"msg": "Ingestion successful"}
     except IngestError as e:
         response = {"msg": "Failed to ingest data", "err": str(e)}
         logging.critical(response)
