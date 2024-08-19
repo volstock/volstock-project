@@ -99,7 +99,9 @@ class TestConnection:
     @patch("src.extract.get_secrets")
     @patch("pg8000.native.Connection")
     @patch("boto3.client")
-    def test_db_params_cll_exception(self, mock_boto_ct, mock_pg_conn, mock_get_secrets):
+    def test_db_params_cll_exception(
+        self, mock_boto_ct, mock_pg_conn, mock_get_secrets
+    ):
         mock_sm_client = MagicMock()
         mock_boto_ct.return_value = mock_sm_client
         mock_get_secrets.return_value = {
@@ -113,8 +115,6 @@ class TestConnection:
         with pytest.raises(IngestError) as e:
             get_connection()
         assert str(e.value) == "Failed to connect to database. Connection failed"
-
-
 
     @patch.dict(os.environ, {"S3_INGEST_BUCKET": "mock-bucket"})
     @patch("src.extract.get_connection")
@@ -144,9 +144,6 @@ class TestConnection:
         result = lambda_handler({}, {})
         assert result == {"msg": "Ingestion successful"}
 
-
-
-
     @patch("src.extract.get_connection")
     def test_lambda_handler_missing_env_var(self, mock_get_connection):
         if "S3_INGEST_BUCKET" in os.environ:
@@ -156,7 +153,7 @@ class TestConnection:
 
         assert result == {
             "msg": "Failed to ingest data",
-            "err": "Failed to get env bucket name. 'S3_INGEST_BUCKET'"
+            "err": "Failed to get env bucket name. 'S3_INGEST_BUCKET'",
         }
 
     @patch.dict(os.environ, {"S3_INGEST_BUCKET": "mock-bucket"})
@@ -186,10 +183,14 @@ class TestConnection:
     @patch("pg8000.native.Connection")
     def test_update_dict_table_empty_db_response(self, mock_conn, s3, s3_bucket):
         mock_dict_table = {"created_at": ["2024-01-01"]}
-        store_table_in_bucket(S3_MOCK_BUCKET_NAME, mock_dict_table, "mock-table", "2024-01-01")
+        store_table_in_bucket(
+            S3_MOCK_BUCKET_NAME, mock_dict_table, "mock-table", "2024-01-01"
+        )
 
         mock_conn.run.return_value = []
-        result = update_dict_table(S3_MOCK_BUCKET_NAME, "mock-table", "2024-01-01", mock_conn)
+        result = update_dict_table(
+            S3_MOCK_BUCKET_NAME, "mock-table", "2024-01-01", mock_conn
+        )
         assert not result[0]
         assert result[1] == mock_dict_table
 
