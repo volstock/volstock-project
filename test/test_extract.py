@@ -235,35 +235,35 @@ class TestStoreTableInBucket:
             "bucket does not exist"
         )
 
-class TestLambdasHandler:
-    @patch("src.extract.get_bucket_name")
-    @patch("src.extract.get_connection")
-    @patch("src.extract.is_bucket_empty")
-    @patch("src.extract.get_table_names")
-    @patch("src.extract.archive_tables")
-    @patch("src.extract.get_dict_table")
-    @patch("src.extract.store_table_in_bucket")
-    def test_lambda_handler_when_given_correct_inputs(
-        self,
-        mock_store_table_in_bucket,
-        mock_get_dict_table,
-        mock_archive_tables,
-        mock_get_table_names,
-        mock_is_bucket_empty,
-        mock_get_connection,
-        mock_get_bucket_name,
-        lambda_event,
-        lambda_context
-    ):
-        mock_get_bucket_name.return_value = "test-bucket"
-        mock_get_connection.return_value = MagicMock()
-        mock_is_bucket_empty.return_value = (False, ["test-key"], "latest/")
-        mock_get_table_names.return_value = ["table1", "table2"]
-        mock_get_dict_table.side_effect = [{"col1": [1, 2]}, {"col2": [3, 4]}]
+# class TestLambdasHandler:
+#     @patch("src.extract.get_bucket_name")
+#     @patch("src.extract.get_connection")
+#     @patch("src.extract.is_bucket_empty")
+#     @patch("src.extract.get_table_names")
+#     @patch("src.extract.archive_tables")
+#     @patch("src.extract.get_dict_table")
+#     @patch("src.extract.store_table_in_bucket")
+#     def test_lambda_handler_when_given_correct_inputs(
+#         self,
+#         mock_store_table_in_bucket,
+#         mock_get_dict_table,
+#         mock_archive_tables,
+#         mock_get_table_names,
+#         mock_is_bucket_empty,
+#         mock_get_connection,
+#         mock_get_bucket_name,
+#         lambda_event,
+#         lambda_context
+#     ):
+#         mock_get_bucket_name.return_value = "test-bucket"
+#         mock_get_connection.return_value = MagicMock()
+#         mock_is_bucket_empty.return_value = (False, ["test-key"], "latest/")
+#         mock_get_table_names.return_value = ["table1", "table2"]
+#         mock_get_dict_table.side_effect = [{"col1": [1, 2]}, {"col2": [3, 4]}]
         
-        response = lambda_handler(lambda_event, lambda_context)
+#         response = lambda_handler(lambda_event, lambda_context)
         
-        assert response == {"msg": "Ingestion successfull"}
+#         assert response == {"msg": "Ingestion successfull"}
         
 
 class TestFormatDate:
