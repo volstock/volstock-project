@@ -16,7 +16,7 @@ Configures the logging module to log only critical messages.
 class IngestError(Exception):
     pass
 """
-Catch-all Error to make our lm=ambda_handler function shorter and more functional
+Catch-all Error to make our lambda_handler function shorter and more functional
 """
 
 def lambda_handler(event, context):
