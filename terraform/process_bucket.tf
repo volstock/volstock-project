@@ -17,28 +17,15 @@ resource "aws_s3_object" "process_lambda_code" {
   source_hash = filemd5(data.archive_file.process_lambda_deployment_package.output_path)
 }
 
-data "archive_file" "process_lambda_layer_pandas" {
+data "archive_file" "process_lambda_layer" {
   type        = "zip"
-  source_dir  = "${path.module}/../deployment-packages/process-layer-pandas"
-  output_path = "${path.module}/../deployment-packages/process_layer_pandas.zip"
+  source_dir  = "${path.module}/../deployment-packages/process-layer"
+  output_path = "${path.module}/../deployment-packages/process_layer.zip"
 }
 
-data "archive_file" "process_lambda_layer_pyarrow" {
-  type        = "zip"
-  source_dir  = "${path.module}/../deployment-packages/process-layer-pyarrow"
-  output_path = "${path.module}/../deployment-packages/process_layer_pyarrow.zip"
-}
-
-resource "aws_s3_object" "process_lambda_layer_pandas" {
-  bucket = aws_s3_bucket.lambda_code_bucket.bucket
-  key    = "process-lambda/process_layer_pandas.zip"
-  source = data.archive_file.process_lambda_layer_pandas.output_path
-  source_hash = filemd5(data.archive_file.process_lambda_layer_pandas.output_path)
-}
-
-resource "aws_s3_object" "process_lambda_layer_pyarrow" {
-  bucket = aws_s3_bucket.lambda_code_bucket.bucket
-  key    = "process-lambda/process_layer_pyarrow.zip"
-  source = data.archive_file.process_lambda_layer_pyarrow.output_path
-  source_hash = filemd5(data.archive_file.process_lambda_layer_pyarrow.output_path)
+resource "aws_s3_object" "process_lambda_layer" {
+  bucket      = aws_s3_bucket.lambda_code_bucket.bucket
+  key         = "process-lambda/process_layer.zip"
+  source      = data.archive_file.process_lambda_layer.output_path
+  source_hash = filemd5(data.archive_file.process_lambda_layer.output_path)
 }

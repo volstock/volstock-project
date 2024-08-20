@@ -1,15 +1,8 @@
-resource "aws_lambda_layer_version" "process_layer_pandas" {
+resource "aws_lambda_layer_version" "process_layer" {
   layer_name          = "process_layer_pandas"
   compatible_runtimes = ["python3.12"]
-  s3_bucket           = aws_s3_object.process_lambda_layer_pandas.bucket
-  s3_key              = aws_s3_object.process_lambda_layer_pandas.key
-}
-
-resource "aws_lambda_layer_version" "process_layer_pyarrow" {
-  layer_name          = "process_layer_pyarrow"
-  compatible_runtimes = ["python3.12"]
-  s3_bucket           = aws_s3_object.process_lambda_layer_pyarrow.bucket
-  s3_key              = aws_s3_object.process_lambda_layer_pyarrow.key
+  s3_bucket           = aws_s3_object.process_lambda_layer.bucket
+  s3_key              = aws_s3_object.process_lambda_layer.key
 }
 
 resource "aws_lambda_function" "process_lambda" {
@@ -21,7 +14,7 @@ resource "aws_lambda_function" "process_lambda" {
   source_code_hash = filebase64sha256(data.archive_file.process_lambda_deployment_package.output_path)
   timeout          = 60
   runtime          = "python3.12"
-  layers           = [aws_lambda_layer_version.process_layer_pandas.arn, aws_lambda_layer_version.process_layer_pyarrow.arn]
+  layers           = [aws_lambda_layer_version.process_layer.arn]
   environment {
     variables = {
       S3_INGEST_BUCKET  = aws_s3_bucket.ingest_bucket.bucket,

@@ -55,7 +55,7 @@ def lambda_handler(event, context):
     triggered by an EventBridge event that starts the ingestion process.
     """
     try:
-        S3_INGEST_BUCKET = get_bucket_name('S3_INGEST_BUCKET')
+        S3_INGEST_BUCKET = get_bucket_name("S3_INGEST_BUCKET")
         conn = get_connection()
         is_empty = is_bucket_empty(S3_INGEST_BUCKET)
         tables = get_table_names(conn)
@@ -93,9 +93,9 @@ def lambda_handler(event, context):
                 update_tables_names.append(table_name)
                 dict_table = get_dict_table(conn, table_name)
                 store_table_in_bucket(S3_INGEST_BUCKET, dict_table, table_name, date)
-        return {"msg": "Ingestion successful"}
+        return {"msg": "Ingestion successful", "tables": update_tables_names}
     except IngestError as e:
-        response = {"msg": "Failed to ingest data", 'tables': update_tables_names, "err": str(e)}
+        response = {"msg": "Failed to ingest data", "err": str(e)}
         logging.critical(response)
         return response
     finally:

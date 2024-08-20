@@ -3,10 +3,9 @@ import boto3
 from botocore.exceptions import ClientError
 import json
 import logging
-from src.extract import get_bucket_name
 import requests
 import io
-from src.extract import get_date
+import os
 
 logging.basicConfig(level=50)
 
@@ -24,6 +23,23 @@ def lambda_handler(event, context):
     except ProcessError as e:
         logging.critical(e)
         return {"msg": "Failed to process data", "err": e}
+
+
+def get_bucket_name(bucket_name):
+    try:
+        bucket = os.environ[bucket_name]
+        return bucket
+    except KeyError as e:
+        raise ProcessError(f"Failed to get env bucket name. {e}")
+
+
+def get_date(bucket):
+    try:
+        s3 = boto3.client("s3", region_name="eu-west-2")
+        date_object = s3.get_object(Bucket=bucket, Key="latest_date")
+        return date_object["Body"].read().decode()
+    except ClientError as e:
+        raise ProcessError(f"Failed to get date from bucket. {e}")
 
 
 def get_dataframe_from_table_json(bucket, table_name):
@@ -207,8 +223,10 @@ def get_dim_date(fact_sales_order):
 def df_to_parquet(df):
     try:
         parquet_file = io.BytesIO()
+        parquet_file_close = parquet_file.close
+        parquet_file.close = lambda: None
         df.to_parquet(parquet_file, index=False)
-        parquet_file.seek(0)
+        parquet_file.close = parquet_file_close
         return parquet_file
     except Exception as e:
         raise ProcessError(f"Failed to convert dataframe to parquet. {e}")
