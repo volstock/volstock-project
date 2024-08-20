@@ -24,11 +24,10 @@ create-environment:
 
 # Execute python related functionalities from within the project's environment
 requirements-ingest:
-	$(call execute_in_env, $(PIP) install boto3 -t ./deployment-packages/ingest-layer/python/ --upgrade)
 	$(call execute_in_env, $(PIP) install pg8000 -t ./deployment-packages/ingest-layer/python/ --upgrade)
 
 requirements-process:
-	$(call execute_in_env, $(PIP) install boto3 -t ./deployment-packages/process-layer/python/ --upgrade)
+	$(call execute_in_env, $(PIP) install pandas -t ./deployment-packages/process-layer/python/ --upgrade)
 
 requirements: create-environment requirements-ingest requirements-process
 
@@ -75,11 +74,11 @@ run-flake:
 
 ## Run the unit tests
 unit-test:
-	$(call execute_in_env, PYTHONPATH=${PYTHONPATH} pytest -vv)
+	$(call execute_in_env, PYTHONPATH=${PYTHONPATH} pytest ./test -vv)
 
 ## Run the coverage check
 check-coverage:
-	$(call execute_in_env, PYTHONPATH=${PYTHONPATH} pytest --cov=src test/)
+	$(call execute_in_env, PYTHONPATH=${PYTHONPATH} pytest --cov=src ./test)
 
 # Run all checks
 run-checks: run-flake unit-test check-coverage
