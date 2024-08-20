@@ -76,25 +76,68 @@ resource "aws_iam_role" "state_machine_role" {
 }
 
 data "aws_iam_policy_document" "lambdas_state_machine_document" {
-
   statement {
     effect = "Allow"
-
     actions = [
       "lambda:InvokeFunction"
     ]
-
     resources = ["${aws_lambda_function.ingest_lambda.arn}:*", "${aws_lambda_function.process_lambda.arn}:*"]
   }
-
 }
 
 resource "aws_iam_policy" "lambdas_state_machine_policy" {
-  name   = "lambdas-access-state-machine-policy"
+  name   = "lambdas_access_state_machine_policy"
   policy = data.aws_iam_policy_document.lambdas_state_machine_document.json
 }
 
 resource "aws_iam_role_policy_attachment" "lambdas_state_machine_policy_attachment" {
   role       = aws_iam_role.state_machine_role.name
   policy_arn = aws_iam_policy.lambdas_state_machine_policy.arn
+}
+
+data "aws_iam_policy_document" "trust_policy_events" {
+  statement {
+    effect = "Allow"
+    principals {
+      type        = "Service"
+      identifiers = ["events.amazonaws.com"]
+    }
+    actions = ["sts:AssumeRole"]
+  }
+}
+
+resource "aws_iam_role" "eventbridge_role" {
+  name               = "event_bridge_role_for_state_machine_execution"
+  assume_role_policy = data.aws_iam_policy_document.trust_policy_events.json
+}
+
+data "aws_iam_policy_document" "eventbridge_states_document" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "states:StartExecution"
+    ]
+    resources = ["${aws_sfn_state_machine.sfn_state_machine.arn}"]
+  }
+}
+
+resource "aws_iam_policy" "eventbridge_states_policy" {
+  name   = "eventbridge_states_execute_policy"
+  policy = data.aws_iam_policy_document.eventbridge_states_document.json
+}
+
+resource "aws_iam_role_policy_attachment" "eventbridge_states_policy_attachment" {
+  role       = aws_iam_role.eventbridge_role.name
+  policy_arn = aws_iam_policy.eventbridge_states_policy.arn
+}
+
+resource "aws_cloudwatch_event_rule" "state_machine_scheduler" {
+  name                = "every-2-mins"
+  schedule_expression = "rate(2 minutes)"
+}
+
+resource "aws_cloudwatch_event_target" "state_machine_every_30_min" {
+  rule     = aws_cloudwatch_event_rule.state_machine_scheduler.name
+  arn      = aws_sfn_state_machine.sfn_state_machine.arn
+  role_arn = aws_iam_role.eventbridge_role.arn
 }

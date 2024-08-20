@@ -199,11 +199,11 @@ class TestGetBucketName:
 
     @patch.dict("os.environ", {"S3_INGEST_BUCKET": S3_MOCK_BUCKET_NAME})
     def test_get_bucket_name(self):
-        assert get_bucket_name() == S3_MOCK_BUCKET_NAME
+        assert get_bucket_name("S3_INGEST_BUCKET") == S3_MOCK_BUCKET_NAME
 
     def test_get_bucket_name_error(self):
         with pytest.raises(IngestError) as e:
-            get_bucket_name()
+            get_bucket_name("S3_INGEST_BUCKET")
         assert str(e.value) == "Failed to get env bucket name. 'S3_INGEST_BUCKET'"
 
 

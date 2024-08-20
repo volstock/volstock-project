@@ -27,7 +27,8 @@ requirements-ingest:
 	$(call execute_in_env, $(PIP) install pg8000 -t ./deployment-packages/ingest-layer/python/ --upgrade)
 
 requirements-process:
-	$(call execute_in_env, $(PIP) install pandas -t ./deployment-packages/process-layer/python/ --upgrade)
+	$(call execute_in_env, $(PIP) install pandas -t ./deployment-packages/process-layer-pandas/python/ --upgrade)
+	$(call execute_in_env, $(PIP) install pyarrow -t ./deployment-packages/process-layer-pyarrow/python/ --upgrade)
 
 requirements: create-environment requirements-ingest requirements-process
 
@@ -46,7 +47,7 @@ flake:
 	$(call execute_in_env, $(PIP) install flake8)
 
 pytest:
-	$(call execute_in_env, $(PIP) install pytest moto boto3 pg8000)
+	$(call execute_in_env, $(PIP) install pytest moto boto3 pg8000 pandas pyarrow)
 
 coverage:
 	$(call execute_in_env, $(PIP) install pytest-cov)
