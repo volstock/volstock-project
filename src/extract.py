@@ -15,12 +15,11 @@ Configures the logging module to log only critical messages.
 
 
 class IngestError(Exception):
+    """
+    Catch-all Error to make our lambda_handler function shorter and more functional
+    """
+
     pass
-
-
-"""
-Catch-all Error to make our lambda_handler function shorter and more functional
-"""
 
 
 def lambda_handler(event, context):
@@ -105,7 +104,7 @@ def lambda_handler(event, context):
 
 
 def format_date(current_time):
-    return current_time.strftime('%Y-%m-%d %H:%M')
+    return current_time.strftime("%Y-%m-%d %H:%M")
 
 
 def get_bucket_name():
