@@ -1,5 +1,5 @@
 resource "aws_lambda_layer_version" "process_layer" {
-  layer_name          = "process_layer"
+  layer_name          = "process_layer_pandas"
   compatible_runtimes = ["python3.12"]
   s3_bucket           = aws_s3_object.process_lambda_layer.bucket
   s3_key              = aws_s3_object.process_lambda_layer.key
@@ -17,7 +17,7 @@ resource "aws_lambda_function" "process_lambda" {
   layers           = [aws_lambda_layer_version.process_layer.arn]
   environment {
     variables = {
-      S3_INGEST_BUCKET = aws_s3_bucket.ingest_bucket.bucket,
+      S3_INGEST_BUCKET  = aws_s3_bucket.ingest_bucket.bucket,
       S3_PROCESS_BUCKET = aws_s3_bucket.process_bucket.bucket
     }
   }

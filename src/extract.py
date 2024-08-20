@@ -55,11 +55,12 @@ def lambda_handler(event, context):
     triggered by an EventBridge event that starts the ingestion process.
     """
     try:
-        S3_INGEST_BUCKET = get_bucket_name()
+        S3_INGEST_BUCKET = get_bucket_name("S3_INGEST_BUCKET")
         conn = get_connection()
         is_empty = is_bucket_empty(S3_INGEST_BUCKET)
         tables = get_table_names(conn)
         date = format_date(datetime.now())
+        update_tables_names = []
         if not is_empty:
             latest_date = get_date(S3_INGEST_BUCKET)
             for table_name in tables:
@@ -72,7 +73,7 @@ def lambda_handler(event, context):
                     S3_INGEST_BUCKET, table_name, latest_date, conn
                 )
                 if needs_update:
-                    print(f"{table_name} table has been updated")
+                    update_tables_names.append(table_name)
                     store_table_in_bucket(
                         S3_INGEST_BUCKET, updated_dict_table, table_name, date
                     )
@@ -89,9 +90,10 @@ def lambda_handler(event, context):
         else:
             store_date_in_bucket(S3_INGEST_BUCKET, date)
             for table_name in tables:
+                update_tables_names.append(table_name)
                 dict_table = get_dict_table(conn, table_name)
                 store_table_in_bucket(S3_INGEST_BUCKET, dict_table, table_name, date)
-        return {"msg": "Ingestion successful"}
+        return {"msg": "Ingestion successful", "tables": update_tables_names}
     except IngestError as e:
         response = {"msg": "Failed to ingest data", "err": str(e)}
         logging.critical(response)
@@ -107,7 +109,7 @@ def format_date(current_time):
     return current_time.strftime("%Y-%m-%d %H:%M")
 
 
-def get_bucket_name():
+def get_bucket_name(bucket_name):
     """
     Retrieves the name of the S3 bucket used for ingestion.
 
@@ -118,7 +120,7 @@ def get_bucket_name():
     - IngestError: If the environment variable 'S3_INGEST_BUCKET' is not found.
     """
     try:
-        bucket = os.environ["S3_INGEST_BUCKET"]
+        bucket = os.environ[bucket_name]
         return bucket
     except KeyError as e:
         raise IngestError(f"Failed to get env bucket name. {e}")
