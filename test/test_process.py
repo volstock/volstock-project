@@ -1,7 +1,6 @@
 import pandas as pd
 import pytest
 import json
-from unittest.mock import patch
 import boto3
 from botocore.exceptions import ClientError
 
