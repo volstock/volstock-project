@@ -381,8 +381,9 @@ def df_to_parquet(df):
         parquet_file = io.BytesIO()
         parquet_file_close = parquet_file.close
         parquet_file.close = lambda: None
-        df.to_parquet(parquet_file, index=False)
+        df.to_parquet(parquet_file)
         parquet_file.close = parquet_file_close
+        parquet_file.seek(0)
         return parquet_file
     except Exception as e:
         raise ProcessError(f"Failed to convert dataframe to parquet. {e}")
