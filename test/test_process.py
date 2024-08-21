@@ -8,8 +8,6 @@ from src.process import (
 )
 
 
-import pandas as pd
-
 def test_get_dim_design():
     sample_data = {
         "design_id": [1, 2, 3],
