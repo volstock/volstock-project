@@ -2,6 +2,7 @@ from datetime import datetime
 import json
 from moto import mock_aws
 import os
+import boto3
 import pytest
 import unittest
 from unittest.mock import patch, MagicMock
