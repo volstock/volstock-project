@@ -32,6 +32,10 @@ jobs:
     steps: 
       - name: Checkout Repo
         uses: actions/checkout@v4
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.4'
       - name: AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
