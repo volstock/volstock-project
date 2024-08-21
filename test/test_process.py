@@ -1,5 +1,6 @@
 import pytest
 import pandas as pd
+from unittest.mock import patch
 from src.process import (
     get_dataframe_from_table_json,
     ProcessError,
