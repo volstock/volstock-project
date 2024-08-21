@@ -5,10 +5,12 @@ from src.process import (
     get_dim_currency,
     get_currency_names_dataframe,
     get_dim_counterparty,
+    get_dim_payment_type,
+    get_dim_transaction,
+    get_fact_payment,
+    get_fact_purchase_order
 )
 
-
-import pandas as pd
 
 def test_get_dim_design():
     sample_data = {
@@ -171,3 +173,172 @@ def test_get_dim_counterparty():
     assert result_df.loc[2, "counterparty_legal_address_line_1"] == "456 Maple Ave"
     assert result_df.loc[3, "counterparty_legal_phone_number"] == "555-9876"
     assert list(result_df.index) == [1, 2, 3]
+
+
+def test_get_dim_payment_type():
+
+    df_payment_type = pd.DataFrame(
+        {
+            "payment_type_id": [1, 2, 3, 4],
+            "payment_type_name": [
+                "SALES_RECEIPT",
+                "SALES_REFUND",
+                "PURCHASE_PAYMENT",
+                "PURCHASE_REFUND"
+            ],
+            "created_at": [
+                "2022-11-03 14:20:49.962000",
+                "2022-11-03 14:20:49.962000",
+                "2022-11-03 14:20:49.962000",
+                "2022-11-03 14:20:49.962000"
+            ],
+            "last_updated": [
+                "2022-11-03 14:20:49.962000",
+                "2022-11-03 14:20:49.962000",
+                "2022-11-03 14:20:49.962000",
+                "2022-11-03 14:20:49.962000"
+            ]
+        }
+    )
+    
+
+    result_df = get_dim_payment_type(df_payment_type)
+    expected_columns = ["payment_type_name"]
+
+    assert isinstance(result_df, pd.DataFrame)  
+    assert "created_at" not in result_df.columns  
+    assert "last_updated" not in result_df.columns  
+    assert all(col in result_df.columns for col in expected_columns) 
+    assert result_df.index.name == "payment_type_id"  
+    assert list(result_df.index) == [1, 2, 3, 4] 
+    assert result_df.loc[1, "payment_type_name"] == "SALES_RECEIPT" 
+    assert result_df.loc[2, "payment_type_name"] == "SALES_REFUND"  
+    assert result_df.loc[3, "payment_type_name"] == "PURCHASE_PAYMENT"  
+    assert result_df.loc[4, "payment_type_name"] == "PURCHASE_REFUND"
+
+
+def test_get_dim_transaction_type():
+
+    df_transaction_type = pd.DataFrame(
+        {
+            "transaction_id": [1, 2],
+            "transaction_type": ["PURCHASE", "SALE"],
+            "sales_order_id": [1, 2],
+            "created_at": [
+                "2023-01-01 09:00:00",
+                "2023-01-02 10:15:00"
+            ],
+            "last_updated": [
+                "2023-01-01 09:30:00",
+                "2023-01-02 10:45:00"
+            ]
+        }
+    )
+    
+    result_df = get_dim_transaction(df_transaction_type)
+    expected_columns = ["transaction_type", "sales_order_id"]
+
+
+    assert isinstance(result_df, pd.DataFrame) 
+    assert "created_at" not in result_df.columns  
+    assert "last_updated" not in result_df.columns  
+    assert all(col in result_df.columns for col in expected_columns) 
+    assert result_df.index.name == "transaction_id"  
+    assert list(result_df.index) == [1, 2]  
+
+    assert result_df.loc[1, "transaction_type"] == "PURCHASE"
+    assert result_df.loc[1, "sales_order_id"] == 1
+    assert result_df.loc[2, "transaction_type"] == "SALE"
+    assert result_df.loc[2, "sales_order_id"] == 2
+
+
+def test_get_fact_payment():
+
+    df_payment = pd.DataFrame(
+        {
+            "payment_id": [2, 3, 5],
+            "amount": ["552548.62", "205952.22", "57067.20"],  # Ensure amount is treated as float
+            "created_at": [
+                "2022-11-03 14:20:52.187000",
+                "2022-11-03 14:20:52.186000",
+                "2022-11-03 14:20:52.187000"
+            ],
+            "last_updated": [
+                "2022-11-03 14:20:52.187000",
+                "2022-11-03 14:20:52.186000",
+                "2022-11-03 14:20:52.187000"
+            ],
+            "company_ac_number": [67305075, 81718079, 66213052],  # Column to be dropped
+            "counterparty_ac_number": [31622269, 47839086, 91659548]  # Column to be dropped
+        }
+    )
+
+
+    result_df = get_fact_payment(df_payment)
+
+    expected_columns = [
+        "amount",
+        "created_date",
+        "created_time",
+        "last_updated_date",
+        "last_updated_time"
+    ]
+
+    assert isinstance(result_df, pd.DataFrame) 
+    assert "created_at" not in result_df.columns 
+    assert "last_updated" not in result_df.columns 
+    assert "company_ac_number" not in result_df.columns 
+    assert "counterparty_ac_number" not in result_df.columns  
+    assert all(col in result_df.columns for col in expected_columns) 
+    assert result_df.index.name == "payment_record_id" 
+    assert list(result_df.index) == [1, 2, 3]  
+
+    assert result_df.loc[1, "amount"] == '552548.62'
+    assert result_df.loc[1, "created_date"] == "2022-11-03"
+    assert result_df.loc[1, "created_time"] == "14:20:52.187000"
+    assert result_df.loc[1, "last_updated_date"] == "2022-11-03"
+    assert result_df.loc[1, "last_updated_time"] == "14:20:52.187000"
+
+
+def test_get_fact_purchase_order():
+    df_purchase_order = pd.DataFrame(
+        {
+            "purchase_order_id": [1, 2, 3],
+            "item_quantity": [371, 286, 839],
+            "created_at": [
+                "2023-02-01 08:00:00",
+                "2023-02-02 09:30:00",
+                "2023-02-03 11:45:00"
+            ],
+            "last_updated": [
+                "2023-02-01 08:30:00",
+                "2023-02-02 10:00:00",
+                "2023-02-03 12:15:00"
+            ]
+        }
+    )
+    
+    result_df = get_fact_purchase_order(df_purchase_order)
+
+    expected_columns = [
+        "purchase_order_id",
+        "item_quantity",
+        "created_date",
+        "created_time",
+        "last_updated_date",
+        "last_updated_time"
+    ]
+
+    assert isinstance(result_df, pd.DataFrame)  
+    assert "created_at" not in result_df.columns  
+    assert "last_updated" not in result_df.columns  
+    assert all(col in result_df.columns for col in expected_columns) 
+    assert result_df.index.name == "purchase_record_id"  
+    assert list(result_df.index) == [1, 2, 3] 
+
+    assert result_df.loc[1, "purchase_order_id"] == 1
+    assert result_df.loc[1, "item_quantity"] == 371
+    assert result_df.loc[1, "created_date"] == "2023-02-01"
+    assert result_df.loc[1, "created_time"] == "08:00:00"
+    assert result_df.loc[1, "last_updated_date"] == "2023-02-01"
+    assert result_df.loc[1, "last_updated_time"] == "08:30:00"
