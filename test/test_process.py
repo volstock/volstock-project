@@ -1,8 +1,5 @@
 import pytest
-import os
-import json
 import pandas as pd
-from unittest.mock import patch, MagicMock
 from src.process import (
     get_dataframe_from_table_json,
     ProcessError,
