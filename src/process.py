@@ -195,7 +195,8 @@ def get_dim_design(df_design):
 def get_currency_names_dataframe():
     try:
         currencies = requests.get(
-            "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies.json"
+            "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/"
+            "currencies.json"
         ).json()
         return pd.DataFrame(
             {
@@ -269,13 +270,13 @@ def get_fact_sales_order(df_sales_order):
             lambda x: x[: x.index(" ")]
         )
         df_sales_order["created_time"] = df_sales_order["created_at"].apply(
-            lambda x: x[x.index(" ") + 1 :]
+            lambda x: x[x.index(" ") + 1:]
         )
         df_sales_order["last_updated_date"] = df_sales_order["last_updated"].apply(
             lambda x: x[: x.index(" ")]
         )
         df_sales_order["last_updated_time"] = df_sales_order["last_updated"].apply(
-            lambda x: x[x.index(" ") + 1 :]
+            lambda x: x[x.index(" ") + 1:]
         )
         return (
             df_sales_order.rename(columns={"staff_id": "sales_staff_id"})
@@ -311,13 +312,13 @@ def get_fact_payment(df_payment):
             lambda x: x[: x.index(" ")]
         )
         df_payment["created_time"] = df_payment["created_at"].apply(
-            lambda x: x[x.index(" ") + 1 :]
+            lambda x: x[x.index(" ") + 1:]
         )
         df_payment["last_updated_date"] = df_payment["last_updated"].apply(
             lambda x: x[: x.index(" ")]
         )
         df_payment["last_updated_time"] = df_payment["last_updated"].apply(
-            lambda x: x[x.index(" ") + 1 :]
+            lambda x: x[x.index(" ") + 1:]
         )
         return df_payment.drop(
             columns=[
@@ -338,14 +339,14 @@ def get_fact_purchase_order(df_purchase_order):
             lambda x: x[: x.index(" ")]
         )
         df_purchase_order["created_time"] = df_purchase_order["created_at"].apply(
-            lambda x: x[x.index(" ") + 1 :]
+            lambda x: x[x.index(" ") + 1:]
         )
         df_purchase_order["last_updated_date"] = df_purchase_order[
             "last_updated"
         ].apply(lambda x: x[: x.index(" ")])
         df_purchase_order["last_updated_time"] = df_purchase_order[
             "last_updated"
-        ].apply(lambda x: x[x.index(" ") + 1 :])
+        ].apply(lambda x: x[x.index(" ") + 1:])
         return df_purchase_order.drop(columns=["created_at", "last_updated"]).set_index(
             "purchase_order_id"
         )
