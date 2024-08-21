@@ -65,11 +65,18 @@ def lambda_handler(event, context):
                 )
                 fact_sales_order = get_fact_sales_order(df_sales_order)
                 fact_sales_order_parquet = df_to_parquet(fact_sales_order)
-                dim_date = get_dim_date(fact_sales_order)
-                dim_date_parquet = df_to_parquet(dim_date)
                 store_parquet_file(
                     S3_PROCESS_BUCKET, fact_sales_order_parquet, "fact_sales_order"
                 )
+                store_parquet_file(S3_PROCESS_BUCKET, dim_date_parquet, "dim_date")
+            local_vars = locals()
+            if (
+                "fact_sales_order" in local_vars
+                or "fact_payment" in local_vars
+                or "fact_purchase_order" in local_vars
+            ):
+                dim_date = get_dim_date()
+                dim_date_parquet = df_to_parquet(dim_date)
                 store_parquet_file(S3_PROCESS_BUCKET, dim_date_parquet, "dim_date")
         return {"msg": "Data process successful."}
     except ProcessError as e:
@@ -244,19 +251,11 @@ def get_fact_sales_order(df_sales_order):
         raise ProcessError(f"Failed to get fact_sales_order. {e}")
 
 
-def get_dim_date(fact_sales_order=None, fact_payment=None, fact_purchase_order=None):
+def get_dim_date():
     try:
-        fact_dates = []
-        if fact_sales_order:
-            fact_dates += [
-                fact_sales_order["created_date"],
-                fact_sales_order["last_updated_date"],
-                fact_sales_order["agreed_payment_date"],
-                fact_sales_order["agreed_delivery_date"],
-            ]
-
-        dates = pd.concat(fact_dates).drop_duplicates(ignore_index=True)
-        timestamps = dates.apply(lambda x: pd.to_datetime(x))
+        timestamps = pd.date_range(
+            start="2022-01-01", end=pd.Timestamp.now().strftime(r"%Y-%m-%d")
+        )
         dim_date = pd.DataFrame(
             {
                 "date_id": timestamps,
