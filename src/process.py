@@ -348,7 +348,7 @@ def get_fact_purchase_order(df_purchase_order):
             "last_updated"
         ].apply(lambda x: x[x.index(" ") + 1:])
         return df_purchase_order.drop(columns=["created_at", "last_updated"]).set_index(
-            "purchase_order_id"
+            "purchase_record_id"
         )
     except Exception as e:
         raise ProcessError(f"Failed to get fact_purchase_order. {e}")
