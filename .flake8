@@ -1,4 +1,4 @@
 # .flake8
 [flake8]
-max-line-length = 95
+max-line-length = 89
 exclude = .git,__pycache__,env

@@ -24,8 +24,8 @@ data "archive_file" "process_lambda_layer" {
 }
 
 resource "aws_s3_object" "process_lambda_layer" {
-  bucket = aws_s3_bucket.lambda_code_bucket.bucket
-  key    = "process-lambda/process_layer.zip"
-  source = data.archive_file.process_lambda_layer.output_path
+  bucket      = aws_s3_bucket.lambda_code_bucket.bucket
+  key         = "process-lambda/process_layer.zip"
+  source      = data.archive_file.process_lambda_layer.output_path
   source_hash = filemd5(data.archive_file.process_lambda_layer.output_path)
 }

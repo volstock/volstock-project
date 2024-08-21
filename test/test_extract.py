@@ -142,7 +142,7 @@ class TestConnection:
         }
 
         result = lambda_handler({}, {})
-        assert result == {"msg": "Ingestion successful"}
+        assert result == {"msg": "Ingestion successful", 'tables': []}
 
     @patch("src.extract.get_connection")
     def test_lambda_handler_missing_env_var(self, mock_get_connection):
@@ -199,11 +199,11 @@ class TestGetBucketName:
 
     @patch.dict("os.environ", {"S3_INGEST_BUCKET": S3_MOCK_BUCKET_NAME})
     def test_get_bucket_name(self):
-        assert get_bucket_name() == S3_MOCK_BUCKET_NAME
+        assert get_bucket_name("S3_INGEST_BUCKET") == S3_MOCK_BUCKET_NAME
 
     def test_get_bucket_name_error(self):
         with pytest.raises(IngestError) as e:
-            get_bucket_name()
+            get_bucket_name("S3_INGEST_BUCKET")
         assert str(e.value) == "Failed to get env bucket name. 'S3_INGEST_BUCKET'"
 
 
@@ -474,9 +474,9 @@ def test_lambda_handler(
     aws_credentials,
 ):
     mock_is_bucket_empty.return_value = True
-    assert lambda_handler("", "") == {"msg": "Ingestion successful"}
+    assert lambda_handler("", "") == {"msg": "Ingestion successful", 'tables': []}
     mock_is_bucket_empty.return_value = False
-    assert lambda_handler("", "") == {"msg": "Ingestion successful"}
+    assert lambda_handler("", "") == {"msg": "Ingestion successful", 'tables': []}
     mock_conn.side_effect = IngestError("Connection mocked exception")
     error_response = lambda_handler("", "")
     assert error_response == {
