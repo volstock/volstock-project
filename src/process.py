@@ -18,8 +18,60 @@ def lambda_handler(event, context):
     try:
         S3_INGEST_BUCKET = get_bucket_name("S3_INGEST_BUCKET")
         S3_PROCESS_BUCKET = get_bucket_name("S3_PROCESS_BUCKET")
-        table_names = event["tables"]
-        print(table_names)
+        tables_names = event["tables"]
+        for table_name in tables_names:
+            if table_name == "staff":
+                df_staff = get_dataframe_from_table_json(S3_INGEST_BUCKET, table_name)
+                df_department = get_dataframe_from_table_json(
+                    S3_INGEST_BUCKET, "department"
+                )
+                dim_staff = get_dim_staff(df_staff, df_department)
+                dim_staff_parquet = df_to_parquet(dim_staff)
+                store_parquet_file(S3_PROCESS_BUCKET, dim_staff_parquet, "dim_staff")
+            elif table_name == "address":
+                df_address = get_dataframe_from_table_json(S3_INGEST_BUCKET, table_name)
+                dim_location = get_dim_location(df_address)
+                dim_location_parquet = df_to_parquet(dim_location)
+                store_parquet_file(
+                    S3_PROCESS_BUCKET, dim_location_parquet, "dim_location"
+                )
+            elif table_name == "design":
+                df_design = get_dataframe_from_table_json(S3_INGEST_BUCKET, table_name)
+                dim_design = get_dim_design(df_design)
+                dim_design_parquet = df_to_parquet(dim_design)
+                store_parquet_file(S3_PROCESS_BUCKET, dim_design_parquet, "dim_design")
+            elif table_name == "currency":
+                df_currency = get_dataframe_from_table_json(
+                    S3_INGEST_BUCKET, table_name
+                )
+                dim_currency = get_dim_currency(df_currency)
+                dim_currency_parquet = df_to_parquet(dim_currency)
+                store_parquet_file(
+                    S3_PROCESS_BUCKET, dim_currency_parquet, "dim_currency"
+                )
+            elif table_name == "counterparty":
+                df_counterparty = get_dataframe_from_table_json(
+                    S3_INGEST_BUCKET, table_name
+                )
+                df_address = get_dataframe_from_table_json(S3_INGEST_BUCKET, "address")
+                dim_counterparty = get_dim_counterparty(df_counterparty, df_address)
+                dim_counterparty_parquet = df_to_parquet(dim_counterparty)
+                store_parquet_file(
+                    S3_PROCESS_BUCKET, dim_counterparty_parquet, "dim_counterparty"
+                )
+            elif table_name == "sales_order":
+                df_sales_order = get_dataframe_from_table_json(
+                    S3_INGEST_BUCKET, table_name
+                )
+                fact_sales_order = get_fact_sales_order(df_sales_order)
+                fact_sales_order_parquet = df_to_parquet(fact_sales_order)
+                dim_date = get_dim_date(fact_sales_order)
+                dim_date_parquet = df_to_parquet(dim_date)
+                store_parquet_file(
+                    S3_PROCESS_BUCKET, fact_sales_order_parquet, "fact_sales_order"
+                )
+                store_parquet_file(S3_PROCESS_BUCKET, dim_date_parquet, "dim_date")
+        return {"msg": "Data process successful."}
     except ProcessError as e:
         logging.critical(e)
         return {"msg": "Failed to process data", "err": e}
@@ -192,16 +244,18 @@ def get_fact_sales_order(df_sales_order):
         raise ProcessError(f"Failed to get fact_sales_order. {e}")
 
 
-def get_dim_date(fact_sales_order):
+def get_dim_date(fact_sales_order=None, fact_payment=None, fact_purchase_order=None):
     try:
-        dates = pd.concat(
-            [
+        fact_dates = []
+        if fact_sales_order:
+            fact_dates += [
                 fact_sales_order["created_date"],
                 fact_sales_order["last_updated_date"],
                 fact_sales_order["agreed_payment_date"],
                 fact_sales_order["agreed_delivery_date"],
             ]
-        ).drop_duplicates(ignore_index=True)
+
+        dates = pd.concat(fact_dates).drop_duplicates(ignore_index=True)
         timestamps = dates.apply(lambda x: pd.to_datetime(x))
         dim_date = pd.DataFrame(
             {
@@ -232,9 +286,9 @@ def df_to_parquet(df):
         raise ProcessError(f"Failed to convert dataframe to parquet. {e}")
 
 
-def store_parquet_file(bucket, parquet_file, table_name):
+def store_parquet_file(bucket, parquet_file, parquet_name):
     try:
         s3 = boto3.client("s3", region_name="eu-west-2")
-        s3.put_object(Body=parquet_file, Bucket=bucket, Key=f"{table_name}.parquet")
+        s3.put_object(Body=parquet_file, Bucket=bucket, Key=f"{parquet_name}.parquet")
     except ClientError as e:
         raise ProcessError(f"Failed to store parquet_file in bucket. {e}")
