@@ -375,26 +375,22 @@ def update_dict_table(bucket, table_name, latest_date, conn):
             Bucket=bucket, Key=f"latest/{latest_date}/{table_name}.json"
         )
         dict_table = json.loads(table_object["Body"].read().decode())
+        
         query = f"SELECT created_at FROM {table_name}"
-        uningested_table_row_count = len(conn.run(query))
-        ingested_table_row_count = len(dict_table["created_at"])
-        row_difference = uningested_table_row_count - ingested_table_row_count
-        if row_difference > 0:
+        db_row_count = len(conn.run(query)) 
+        s3_row_count = len(dict_table["created_at"]) 
+        
+        if db_row_count > s3_row_count:
             update_rows = conn.run(
                 f"SELECT * FROM {table_name} OFFSET :length",
-                length=ingested_table_row_count,
-            )
+                length=s3_row_count,
+            ) 
             columns = [c["name"] for c in conn.columns]
-            zipped = zip(
-                columns,
-                [
-                    [update_row[i] for update_row in update_rows]
-                    for i in range(len(columns))
-                ],
-            )
-            for curr_zip in zipped:
-                dict_table[curr_zip[0]] += curr_zip[1]
-            return (True, dict_table)
+            
+            for column, values in zip(columns, zip(*update_rows)):
+                dict_table[column] += values
+            
+            return True, dict_table
         return (False, dict_table)
     except Exception as e:
         raise IngestError(f"Failed to update table. {e}")
