@@ -68,7 +68,42 @@ def lambda_handler(event, context):
                 store_parquet_file(
                     S3_PROCESS_BUCKET, fact_sales_order_parquet, "fact_sales_order"
                 )
-                store_parquet_file(S3_PROCESS_BUCKET, dim_date_parquet, "dim_date")
+            elif table_name == "transaction":
+                df_transaction = get_dataframe_from_table_json(
+                    S3_INGEST_BUCKET, table_name
+                )
+                dim_transaction = get_dim_transaction(df_transaction)
+                dim_transaction_parquet = df_to_parquet(dim_transaction)
+                store_parquet_file(
+                    S3_PROCESS_BUCKET, dim_transaction_parquet, "dim_transaction"
+                )
+            elif table_name == "payment_type":
+                df_payment_type = get_dataframe_from_table_json(
+                    S3_INGEST_BUCKET, table_name
+                )
+                dim_payment_type = get_dim_payment_type(df_payment_type)
+                dim_payment_type_parquet = df_to_parquet(dim_payment_type)
+                store_parquet_file(
+                    S3_PROCESS_BUCKET, dim_payment_type_parquet, "dim_payment_type"
+                )
+            elif table_name == "payment":
+                df_payment = get_dataframe_from_table_json(S3_INGEST_BUCKET, table_name)
+                fact_payment = get_fact_payment(df_payment)
+                fact_payment_parquet = df_to_parquet(fact_payment)
+                store_parquet_file(
+                    S3_PROCESS_BUCKET, fact_payment_parquet, "fact_payment"
+                )
+            elif table_name == "purchase_order":
+                df_purchase_order = get_dataframe_from_table_json(
+                    S3_INGEST_BUCKET, table_name
+                )
+                fact_purchase_order = get_fact_purchase_order(df_purchase_order)
+                fact_purchase_order_parquet = df_to_parquet(fact_purchase_order)
+                store_parquet_file(
+                    S3_PROCESS_BUCKET,
+                    fact_purchase_order_parquet,
+                    "fact_purchase_order",
+                )
             local_vars = locals()
             if (
                 "fact_sales_order" in local_vars
@@ -81,7 +116,7 @@ def lambda_handler(event, context):
         return {"msg": "Data process successful."}
     except ProcessError as e:
         logging.critical(e)
-        return {"msg": "Failed to process data", "err": e}
+        return {"msg": "Failed to process data", "err": str(e)}
 
 
 def get_bucket_name(bucket_name):
@@ -156,69 +191,12 @@ def get_dim_design(df_design):
     except Exception as e:
         raise ProcessError(f"Failed to get dim_design. {e}")
 
-def get_dim_payment_type(df_payment_type):
-    try:
-        return df_payment_type.drop(columns=["created_at", "last_updated"]).set_index(
-            "payment_type_id"
-        )
-    except Exception as e:
-        raise ProcessError(f"Failed to get dim_payment_type. {e}")
 
-def get_dim_transaction_type(df_transaction_type):
-    try:
-        return df_transaction_type.drop(columns=["created_at", "last_updated", "" ]).set_index(
-            "transaction_id"
-        )
-    except Exception as e:
-        raise ProcessError(f"Failed to get dim_transaction_type. {e}")
-
-def get_fact_payment(df_payment):
-    try:
-        df_payment["payment_record_id"] = range(1, len(df_payment) + 1)
-        df_payment["created_date"] = df_payment["created_at"].apply(
-                lambda x: x[: x.index(" ")]
-            )
-        df_payment["created_time"] = df_payment["created_at"].apply(
-                lambda x: x[x.index(" ") + 1 :]
-            )
-        df_payment["last_updated_date"] = df_payment["last_updated"].apply(
-                lambda x: x[: x.index(" ")]
-            )
-        df_payment["last_updated_time"] = df_payment["last_updated"].apply(
-                lambda x: x[x.index(" ") + 1 :]
-            )
-        return (
-                df_payment.drop(columns=["created_at", "last_updated", "company_ac_number", "counterparty_ac_number"])
-                .set_index("payment_record_id")
-            )
-    except Exception as e:
-        raise ProcessError(f"Failed to get dim_fact_payment. {e}")
-
-def get_fact_purchase_order(df_purchase_order):
-    try:
-        df_purchase_order["created_date"] = df_purchase_order["created_at"].apply(
-                lambda x: x[: x.index(" ")]
-            )
-        df_purchase_order["created_time"] = df_purchase_order["created_at"].apply(
-                lambda x: x[x.index(" ") + 1 :]
-            )
-        df_purchase_order["last_updated_date"] = df_purchase_order["last_updated"].apply(
-                lambda x: x[: x.index(" ")]
-            )
-        df_purchase_order["last_updated_time"] = df_purchase_order["last_updated"].apply(
-                lambda x: x[x.index(" ") + 1 :]
-            )
-        return (
-                df_purchase_order.drop(columns=["created_at", "last_updated", "purchase_record_id"])
-                .set_index("purchase_order_id")
-            )
-    except Exception as e:
-        raise ProcessError(f"Failed to get fact_purchase_order. {e}")
-    
 def get_currency_names_dataframe():
     try:
         currencies = requests.get(
-            "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies.json"
+            "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/"
+            "currencies.json"
         ).json()
         return pd.DataFrame(
             {
@@ -292,13 +270,13 @@ def get_fact_sales_order(df_sales_order):
             lambda x: x[: x.index(" ")]
         )
         df_sales_order["created_time"] = df_sales_order["created_at"].apply(
-            lambda x: x[x.index(" ") + 1 :]
+            lambda x: x[x.index(" ") + 1:]
         )
         df_sales_order["last_updated_date"] = df_sales_order["last_updated"].apply(
             lambda x: x[: x.index(" ")]
         )
         df_sales_order["last_updated_time"] = df_sales_order["last_updated"].apply(
-            lambda x: x[x.index(" ") + 1 :]
+            lambda x: x[x.index(" ") + 1:]
         )
         return (
             df_sales_order.rename(columns={"staff_id": "sales_staff_id"})
@@ -307,6 +285,73 @@ def get_fact_sales_order(df_sales_order):
         )
     except Exception as e:
         raise ProcessError(f"Failed to get fact_sales_order. {e}")
+
+
+def get_dim_payment_type(df_payment_type):
+    try:
+        return df_payment_type.drop(columns=["created_at", "last_updated"]).set_index(
+            "payment_type_id"
+        )
+    except Exception as e:
+        raise ProcessError(f"Failed to get dim_payment_type. {e}")
+
+
+def get_dim_transaction(df_transaction):
+    try:
+        return df_transaction.drop(columns=["created_at", "last_updated"]).set_index(
+            "transaction_id"
+        )
+    except Exception as e:
+        raise ProcessError(f"Failed to get dim_transaction. {e}")
+
+
+def get_fact_payment(df_payment):
+    try:
+        df_payment["payment_record_id"] = range(1, len(df_payment) + 1)
+        df_payment["created_date"] = df_payment["created_at"].apply(
+            lambda x: x[: x.index(" ")]
+        )
+        df_payment["created_time"] = df_payment["created_at"].apply(
+            lambda x: x[x.index(" ") + 1:]
+        )
+        df_payment["last_updated_date"] = df_payment["last_updated"].apply(
+            lambda x: x[: x.index(" ")]
+        )
+        df_payment["last_updated_time"] = df_payment["last_updated"].apply(
+            lambda x: x[x.index(" ") + 1:]
+        )
+        return df_payment.drop(
+            columns=[
+                "created_at",
+                "last_updated",
+                "company_ac_number",
+                "counterparty_ac_number",
+            ]
+        ).set_index("payment_record_id")
+    except Exception as e:
+        raise ProcessError(f"Failed to get dim_fact_payment. {e}")
+
+
+def get_fact_purchase_order(df_purchase_order):
+    try:
+        df_purchase_order["purchase_record_id"] = range(1, len(df_purchase_order) + 1)
+        df_purchase_order["created_date"] = df_purchase_order["created_at"].apply(
+            lambda x: x[: x.index(" ")]
+        )
+        df_purchase_order["created_time"] = df_purchase_order["created_at"].apply(
+            lambda x: x[x.index(" ") + 1:]
+        )
+        df_purchase_order["last_updated_date"] = df_purchase_order[
+            "last_updated"
+        ].apply(lambda x: x[: x.index(" ")])
+        df_purchase_order["last_updated_time"] = df_purchase_order[
+            "last_updated"
+        ].apply(lambda x: x[x.index(" ") + 1:])
+        return df_purchase_order.drop(columns=["created_at", "last_updated"]).set_index(
+            "purchase_order_id"
+        )
+    except Exception as e:
+        raise ProcessError(f"Failed to get fact_purchase_order. {e}")
 
 
 def get_dim_date():
