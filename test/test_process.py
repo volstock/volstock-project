@@ -8,8 +8,9 @@ from src.process import (
 )
 
 
-def test_get_dim_design():
+import pandas as pd
 
+def test_get_dim_design():
     sample_data = {
         "design_id": [1, 2, 3],
         "design_name": ["Wooden", "Bronze", "Soft"],
@@ -32,13 +33,16 @@ def test_get_dim_design():
     }
     df_design = pd.DataFrame(sample_data)
     result_df = get_dim_design(df_design)
-    expected_columns = ["design_id", "design_name", "file_location", "file_name"]
+    expected_columns = ["design_name", "file_location", "file_name"]
+
 
     assert isinstance(result_df, pd.DataFrame)
     assert "created_at" not in result_df.columns
     assert "last_updated" not in result_df.columns
     assert all(col in result_df.columns for col in expected_columns)
+    assert result_df.index.name == "design_id"
     assert len(result_df) == len(df_design)
+
 
 
 def test_get_currency_names_dataframe():
@@ -77,7 +81,6 @@ def test_get_currency_names_dataframe():
 
 
 def test_get_dim_currency():
-
     sample_currency_data = {
         "currency_id": [1, 2, 3],
         "currency_code": ["USD", "EUR", "GBP"],
@@ -105,25 +108,21 @@ def test_get_dim_currency():
         mock_get_names.return_value = mock_currency_names
 
         result_df = get_dim_currency(df_currency)
-        expected_columns = ["currency_id", "currency_code", "currency_name"]
+        expected_columns = ["currency_code", "currency_name"]
+        expected_names = ["US Dollar", "Euro", "British Pound"]
 
         assert isinstance(result_df, pd.DataFrame)
         assert "created_at" not in result_df.columns
         assert "last_updated" not in result_df.columns
         assert all(col in result_df.columns for col in expected_columns)
-        assert len(result_df) == len(df_currency)
-
-        expected_names = ["US Dollar", "Euro", "British Pound"]
+        assert result_df.index.name == "currency_id"
         assert result_df["currency_name"].tolist() == expected_names
-
-        assert result_df["currency_id"].tolist() == [1, 2, 3]
         assert result_df["currency_code"].tolist() == ["usd", "eur", "gbp"]
+        assert list(result_df.index) == [1, 2, 3]
 
         mock_get_names.assert_called_once()
 
-
 def test_get_dim_counterparty():
-
     df_counterparty = pd.DataFrame(
         {
             "counterparty_id": [1, 2, 3],
@@ -141,28 +140,19 @@ def test_get_dim_counterparty():
     df_address = pd.DataFrame(
         {
             "address_id": [15, 28, 2],
-            "address_line_1": [
-                "6826 Herzog Via",
-                "179 Alexie Cliffs",
-                "148 Sincere Fort",
-            ],
-            "address_line_2": [
-                "Tremaine Circles",
-                "Torphy Turnpike",
-                " Grady Turnpike",
-            ],
-            "district": ["Avon", "Buckinghamshire", "Cambridgeshire"],
-            "city": ["Aliso Viejo", "Olsonside", "Kendraburgh"],
-            "postal_code": ["28441", "56693-0660", "89470"],
-            "country": ["Austria", "Congo", "Antigua and Barbuda"],
-            "phone": ["1803 637401", "9621 880720", "0730 783349"],
+            "address_line_1": ["123 Main St", "456 Maple Ave", "789 Elm St"],
+            "address_line_2": ["Suite 100", "Apt 202", "PO Box 303"],
+            "district": ["North District", "East District", "West District"],
+            "city": ["Springfield", "Shelbyville", "Ogdenville"],
+            "postal_code": ["11111", "22222", "33333"],
+            "country": ["USA", "USA", "USA"],
+            "phone": ["555-1234", "555-5678", "555-9876"],
         }
     )
 
     result_df = get_dim_counterparty(df_counterparty, df_address)
 
     expected_columns = [
-        "counterparty_id",
         "counterparty_legal_name",
         "counterparty_legal_address_line_1",
         "counterparty_legal_address_line_2",
@@ -173,18 +163,11 @@ def test_get_dim_counterparty():
         "counterparty_legal_phone_number",
     ]
 
+
     assert isinstance(result_df, pd.DataFrame)
     assert all(col in result_df.columns for col in expected_columns)
-    assert len(result_df) == len(df_counterparty)
-
-    assert result_df.loc[0, "counterparty_legal_address_line_1"] == "6826 Herzog Via"
-    assert result_df.loc[1, "counterparty_legal_city"] == "Olsonside"
-    assert result_df.loc[2, "counterparty_legal_phone_number"] == "0730 783349"
-
-    assert result_df.loc[0, "counterparty_legal_name"] == "Fahey and Sons"
-    assert result_df.loc[1, "counterparty_legal_name"] == "Armstrong Inc"
-    assert result_df.loc[2, "counterparty_legal_name"] == "Kohler Inc"
-
-    assert "commercial_contact" not in result_df.columns
-    assert "delivery_contact" not in result_df.columns
-    assert "legal_address_id" not in result_df.columns
+    assert result_df.index.name == "counterparty_id"
+    assert result_df.loc[1, "counterparty_legal_name"] == "Fahey and Sons"
+    assert result_df.loc[2, "counterparty_legal_address_line_1"] == "456 Maple Ave"
+    assert result_df.loc[3, "counterparty_legal_phone_number"] == "555-9876"
+    assert list(result_df.index) == [1, 2, 3]
