@@ -1,4 +1,3 @@
-import boto3
 from datetime import datetime
 import json
 from moto import mock_aws
