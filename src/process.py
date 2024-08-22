@@ -189,10 +189,13 @@ def get_dim_staff(df_staff, df_department):
 
 
 def get_dim_location(df_address):
-    df_location = df_address.rename(columns={"address_id": "location_id"})
-    return df_location.drop(columns=["created_at", "last_updated"]).set_index(
-        "location_id"
-    )
+    try:
+        df_location = df_address.rename(columns={"address_id": "location_id"})
+        return df_location.drop(columns=["created_at", "last_updated"]).set_index(
+            "location_id"
+        )
+    except Exception as e:
+        raise ProcessError(f"Failed to get dim_location. {e}")
 
 
 def get_dim_design(df_design):
@@ -341,7 +344,7 @@ def get_fact_payment(df_payment):
             ]
         ).set_index("payment_record_id")
     except Exception as e:
-        raise ProcessError(f"Failed to get dim_fact_payment. {e}")
+        raise ProcessError(f"Failed to get fact_payment. {e}")
 
 
 def get_fact_purchase_order(df_purchase_order):
