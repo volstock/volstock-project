@@ -42,3 +42,41 @@ resource "aws_iam_role_policy_attachment" "s3_load_policy_attachment" {
   role       = aws_iam_role.load_lambda_role.name
   policy_arn = aws_iam_policy.s3_policy_load.arn
 }
+
+data "aws_secretsmanager_secret" "warehouse_db_name" {
+  name = "whdb_name"
+}
+
+data "aws_secretsmanager_secret" "warehouse_db_host" {
+  name = "whdb_host"
+}
+
+data "aws_secretsmanager_secret" "warehouse_db_user" {
+  name = "whdb_user"
+}
+
+data "aws_secretsmanager_secret" "warehouse_db_pass" {
+  name = "whdb_pass"
+}
+
+data "aws_iam_policy_document" "sm_load_document" {
+  statement {
+    actions = ["secretsmanager:GetSecretValue"]
+    resources = [
+      "${data.aws_secretsmanager_secret.warehouse_db_name.arn}",
+      "${data.aws_secretsmanager_secret.warehouse_db_host.arn}",
+      "${data.aws_secretsmanager_secret.warehouse_db_user.arn}",
+      "${data.aws_secretsmanager_secret.warehouse_db_pass.arn}",
+    ]
+  }
+}
+
+resource "aws_iam_policy" "sm_policy_load" {
+  name   = "sm-policy-load-lambda"
+  policy = data.aws_iam_policy_document.sm_load_document.json
+}
+
+resource "aws_iam_role_policy_attachment" "sm_load_policy_attachment" {
+  role       = aws_iam_role.load_lambda_role.name
+  policy_arn = aws_iam_policy.sm_policy_load.arn
+}
