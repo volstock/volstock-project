@@ -132,7 +132,6 @@ resource "aws_iam_role_policy_attachment" "eventbridge_states_policy_attachment"
 }
 
 resource "aws_cloudwatch_event_rule" "state_machine_scheduler" {
-  name                = "every-2-mins"
   schedule_expression = "rate(2 minutes)"
 }
 

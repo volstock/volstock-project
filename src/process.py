@@ -18,11 +18,105 @@ def lambda_handler(event, context):
     try:
         S3_INGEST_BUCKET = get_bucket_name("S3_INGEST_BUCKET")
         S3_PROCESS_BUCKET = get_bucket_name("S3_PROCESS_BUCKET")
-        table_names = event["tables"]
-        print(table_names)
+        tables_names = event["tables"]
+        for table_name in tables_names:
+            if table_name == "staff":
+                df_staff = get_dataframe_from_table_json(S3_INGEST_BUCKET, table_name)
+                df_department = get_dataframe_from_table_json(
+                    S3_INGEST_BUCKET, "department"
+                )
+                dim_staff = get_dim_staff(df_staff, df_department)
+                dim_staff_parquet = df_to_parquet(dim_staff)
+                store_parquet_file(S3_PROCESS_BUCKET, dim_staff_parquet, "dim_staff")
+            elif table_name == "address":
+                df_address = get_dataframe_from_table_json(S3_INGEST_BUCKET, table_name)
+                dim_location = get_dim_location(df_address)
+                dim_location_parquet = df_to_parquet(dim_location)
+                store_parquet_file(
+                    S3_PROCESS_BUCKET, dim_location_parquet, "dim_location"
+                )
+            elif table_name == "design":
+                df_design = get_dataframe_from_table_json(S3_INGEST_BUCKET, table_name)
+                dim_design = get_dim_design(df_design)
+                dim_design_parquet = df_to_parquet(dim_design)
+                store_parquet_file(S3_PROCESS_BUCKET, dim_design_parquet, "dim_design")
+            elif table_name == "currency":
+                df_currency = get_dataframe_from_table_json(
+                    S3_INGEST_BUCKET, table_name
+                )
+                dim_currency = get_dim_currency(df_currency)
+                dim_currency_parquet = df_to_parquet(dim_currency)
+                store_parquet_file(
+                    S3_PROCESS_BUCKET, dim_currency_parquet, "dim_currency"
+                )
+            elif table_name == "counterparty":
+                df_counterparty = get_dataframe_from_table_json(
+                    S3_INGEST_BUCKET, table_name
+                )
+                df_address = get_dataframe_from_table_json(S3_INGEST_BUCKET, "address")
+                dim_counterparty = get_dim_counterparty(df_counterparty, df_address)
+                dim_counterparty_parquet = df_to_parquet(dim_counterparty)
+                store_parquet_file(
+                    S3_PROCESS_BUCKET, dim_counterparty_parquet, "dim_counterparty"
+                )
+            elif table_name == "sales_order":
+                df_sales_order = get_dataframe_from_table_json(
+                    S3_INGEST_BUCKET, table_name
+                )
+                fact_sales_order = get_fact_sales_order(df_sales_order)
+                fact_sales_order_parquet = df_to_parquet(fact_sales_order)
+                store_parquet_file(
+                    S3_PROCESS_BUCKET, fact_sales_order_parquet, "fact_sales_order"
+                )
+            elif table_name == "transaction":
+                df_transaction = get_dataframe_from_table_json(
+                    S3_INGEST_BUCKET, table_name
+                )
+                dim_transaction = get_dim_transaction(df_transaction)
+                dim_transaction_parquet = df_to_parquet(dim_transaction)
+                store_parquet_file(
+                    S3_PROCESS_BUCKET, dim_transaction_parquet, "dim_transaction"
+                )
+            elif table_name == "payment_type":
+                df_payment_type = get_dataframe_from_table_json(
+                    S3_INGEST_BUCKET, table_name
+                )
+                dim_payment_type = get_dim_payment_type(df_payment_type)
+                dim_payment_type_parquet = df_to_parquet(dim_payment_type)
+                store_parquet_file(
+                    S3_PROCESS_BUCKET, dim_payment_type_parquet, "dim_payment_type"
+                )
+            elif table_name == "payment":
+                df_payment = get_dataframe_from_table_json(S3_INGEST_BUCKET, table_name)
+                fact_payment = get_fact_payment(df_payment)
+                fact_payment_parquet = df_to_parquet(fact_payment)
+                store_parquet_file(
+                    S3_PROCESS_BUCKET, fact_payment_parquet, "fact_payment"
+                )
+            elif table_name == "purchase_order":
+                df_purchase_order = get_dataframe_from_table_json(
+                    S3_INGEST_BUCKET, table_name
+                )
+                fact_purchase_order = get_fact_purchase_order(df_purchase_order)
+                fact_purchase_order_parquet = df_to_parquet(fact_purchase_order)
+                store_parquet_file(
+                    S3_PROCESS_BUCKET,
+                    fact_purchase_order_parquet,
+                    "fact_purchase_order",
+                )
+            local_vars = locals()
+            if (
+                "fact_sales_order" in local_vars
+                or "fact_payment" in local_vars
+                or "fact_purchase_order" in local_vars
+            ):
+                dim_date = get_dim_date()
+                dim_date_parquet = df_to_parquet(dim_date)
+                store_parquet_file(S3_PROCESS_BUCKET, dim_date_parquet, "dim_date")
+        return {"msg": "Data process successful."}
     except ProcessError as e:
         logging.critical(e)
-        return {"msg": "Failed to process data", "err": e}
+        return {"msg": "Failed to process data", "err": str(e)}
 
 
 def get_bucket_name(bucket_name):
@@ -97,69 +191,12 @@ def get_dim_design(df_design):
     except Exception as e:
         raise ProcessError(f"Failed to get dim_design. {e}")
 
-def get_dim_payment_type(df_payment_type):
-    try:
-        return df_payment_type.drop(columns=["created_at", "last_updated"]).set_index(
-            "payment_type_id"
-        )
-    except Exception as e:
-        raise ProcessError(f"Failed to get dim_payment_type. {e}")
 
-def get_dim_transaction_type(df_transaction_type):
-    try:
-        return df_transaction_type.drop(columns=["created_at", "last_updated", "" ]).set_index(
-            "transaction_id"
-        )
-    except Exception as e:
-        raise ProcessError(f"Failed to get dim_transaction_type. {e}")
-
-def get_fact_payment(df_payment):
-    try:
-        df_payment["payment_record_id"] = range(1, len(df_payment) + 1)
-        df_payment["created_date"] = df_payment["created_at"].apply(
-                lambda x: x[: x.index(" ")]
-            )
-        df_payment["created_time"] = df_payment["created_at"].apply(
-                lambda x: x[x.index(" ") + 1 :]
-            )
-        df_payment["last_updated_date"] = df_payment["last_updated"].apply(
-                lambda x: x[: x.index(" ")]
-            )
-        df_payment["last_updated_time"] = df_payment["last_updated"].apply(
-                lambda x: x[x.index(" ") + 1 :]
-            )
-        return (
-                df_payment.drop(columns=["created_at", "last_updated", "company_ac_number", "counterparty_ac_number"])
-                .set_index("payment_record_id")
-            )
-    except Exception as e:
-        raise ProcessError(f"Failed to get dim_fact_payment. {e}")
-
-def get_fact_purchase_order(df_purchase_order):
-    try:
-        df_purchase_order["created_date"] = df_purchase_order["created_at"].apply(
-                lambda x: x[: x.index(" ")]
-            )
-        df_purchase_order["created_time"] = df_purchase_order["created_at"].apply(
-                lambda x: x[x.index(" ") + 1 :]
-            )
-        df_purchase_order["last_updated_date"] = df_purchase_order["last_updated"].apply(
-                lambda x: x[: x.index(" ")]
-            )
-        df_purchase_order["last_updated_time"] = df_purchase_order["last_updated"].apply(
-                lambda x: x[x.index(" ") + 1 :]
-            )
-        return (
-                df_purchase_order.drop(columns=["created_at", "last_updated", "purchase_record_id"])
-                .set_index("purchase_order_id")
-            )
-    except Exception as e:
-        raise ProcessError(f"Failed to get fact_purchase_order. {e}")
-    
 def get_currency_names_dataframe():
     try:
         currencies = requests.get(
-            "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies.json"
+            "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/"
+            "currencies.json"
         ).json()
         return pd.DataFrame(
             {
@@ -233,13 +270,13 @@ def get_fact_sales_order(df_sales_order):
             lambda x: x[: x.index(" ")]
         )
         df_sales_order["created_time"] = df_sales_order["created_at"].apply(
-            lambda x: x[x.index(" ") + 1 :]
+            lambda x: x[x.index(" ") + 1:]
         )
         df_sales_order["last_updated_date"] = df_sales_order["last_updated"].apply(
             lambda x: x[: x.index(" ")]
         )
         df_sales_order["last_updated_time"] = df_sales_order["last_updated"].apply(
-            lambda x: x[x.index(" ") + 1 :]
+            lambda x: x[x.index(" ") + 1:]
         )
         return (
             df_sales_order.rename(columns={"staff_id": "sales_staff_id"})
@@ -250,17 +287,78 @@ def get_fact_sales_order(df_sales_order):
         raise ProcessError(f"Failed to get fact_sales_order. {e}")
 
 
-def get_dim_date(fact_sales_order):
+def get_dim_payment_type(df_payment_type):
     try:
-        dates = pd.concat(
-            [
-                fact_sales_order["created_date"],
-                fact_sales_order["last_updated_date"],
-                fact_sales_order["agreed_payment_date"],
-                fact_sales_order["agreed_delivery_date"],
+        return df_payment_type.drop(columns=["created_at", "last_updated"]).set_index(
+            "payment_type_id"
+        )
+    except Exception as e:
+        raise ProcessError(f"Failed to get dim_payment_type. {e}")
+
+
+def get_dim_transaction(df_transaction):
+    try:
+        return df_transaction.drop(columns=["created_at", "last_updated"]).set_index(
+            "transaction_id"
+        )
+    except Exception as e:
+        raise ProcessError(f"Failed to get dim_transaction. {e}")
+
+
+def get_fact_payment(df_payment):
+    try:
+        df_payment["payment_record_id"] = range(1, len(df_payment) + 1)
+        df_payment["created_date"] = df_payment["created_at"].apply(
+            lambda x: x[: x.index(" ")]
+        )
+        df_payment["created_time"] = df_payment["created_at"].apply(
+            lambda x: x[x.index(" ") + 1:]
+        )
+        df_payment["last_updated_date"] = df_payment["last_updated"].apply(
+            lambda x: x[: x.index(" ")]
+        )
+        df_payment["last_updated_time"] = df_payment["last_updated"].apply(
+            lambda x: x[x.index(" ") + 1:]
+        )
+        return df_payment.drop(
+            columns=[
+                "created_at",
+                "last_updated",
+                "company_ac_number",
+                "counterparty_ac_number",
             ]
-        ).drop_duplicates(ignore_index=True)
-        timestamps = dates.apply(lambda x: pd.to_datetime(x))
+        ).set_index("payment_record_id")
+    except Exception as e:
+        raise ProcessError(f"Failed to get dim_fact_payment. {e}")
+
+
+def get_fact_purchase_order(df_purchase_order):
+    try:
+        df_purchase_order["purchase_record_id"] = range(1, len(df_purchase_order) + 1)
+        df_purchase_order["created_date"] = df_purchase_order["created_at"].apply(
+            lambda x: x[: x.index(" ")]
+        )
+        df_purchase_order["created_time"] = df_purchase_order["created_at"].apply(
+            lambda x: x[x.index(" ") + 1:]
+        )
+        df_purchase_order["last_updated_date"] = df_purchase_order[
+            "last_updated"
+        ].apply(lambda x: x[: x.index(" ")])
+        df_purchase_order["last_updated_time"] = df_purchase_order[
+            "last_updated"
+        ].apply(lambda x: x[x.index(" ") + 1:])
+        return df_purchase_order.drop(columns=["created_at", "last_updated"]).set_index(
+            "purchase_record_id"
+        )
+    except Exception as e:
+        raise ProcessError(f"Failed to get fact_purchase_order. {e}")
+
+
+def get_dim_date():
+    try:
+        timestamps = pd.date_range(
+            start="2022-01-01", end=pd.Timestamp.now().strftime(r"%Y-%m-%d")
+        )
         dim_date = pd.DataFrame(
             {
                 "date_id": timestamps,
@@ -283,16 +381,17 @@ def df_to_parquet(df):
         parquet_file = io.BytesIO()
         parquet_file_close = parquet_file.close
         parquet_file.close = lambda: None
-        df.to_parquet(parquet_file, index=False)
+        df.to_parquet(parquet_file)
         parquet_file.close = parquet_file_close
+        parquet_file.seek(0)
         return parquet_file
     except Exception as e:
         raise ProcessError(f"Failed to convert dataframe to parquet. {e}")
 
 
-def store_parquet_file(bucket, parquet_file, table_name):
+def store_parquet_file(bucket, parquet_file, parquet_name):
     try:
         s3 = boto3.client("s3", region_name="eu-west-2")
-        s3.put_object(Body=parquet_file, Bucket=bucket, Key=f"{table_name}.parquet")
+        s3.put_object(Body=parquet_file, Bucket=bucket, Key=f"{parquet_name}.parquet")
     except ClientError as e:
         raise ProcessError(f"Failed to store parquet_file in bucket. {e}")

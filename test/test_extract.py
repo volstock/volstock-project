@@ -1,8 +1,8 @@
-import boto3
 from datetime import datetime
 import json
 from moto import mock_aws
 import os
+import boto3
 import pytest
 import unittest
 from unittest.mock import patch, MagicMock
@@ -142,7 +142,7 @@ class TestConnection:
         }
 
         result = lambda_handler({}, {})
-        assert result == {"msg": "Ingestion successful"}
+        assert result == {"msg": "Ingestion successful", 'tables': []}
 
     @patch("src.extract.get_connection")
     def test_lambda_handler_missing_env_var(self, mock_get_connection):
@@ -474,9 +474,9 @@ def test_lambda_handler(
     aws_credentials,
 ):
     mock_is_bucket_empty.return_value = True
-    assert lambda_handler("", "") == {"msg": "Ingestion successful"}
+    assert lambda_handler("", "") == {"msg": "Ingestion successful", 'tables': []}
     mock_is_bucket_empty.return_value = False
-    assert lambda_handler("", "") == {"msg": "Ingestion successful"}
+    assert lambda_handler("", "") == {"msg": "Ingestion successful", 'tables': []}
     mock_conn.side_effect = IngestError("Connection mocked exception")
     error_response = lambda_handler("", "")
     assert error_response == {
