@@ -50,6 +50,29 @@ resource "aws_sfn_state_machine" "sfn_state_machine" {
           "BackoffRate": 2
         }
       ],
+      "Next": "Load processed data"
+    },
+    "Load processed data": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "Payload.$": "$",
+        "FunctionName": "arn:aws:lambda:${data.aws_region.current_region.name}:${data.aws_caller_identity.current_account.account_id}:function:${aws_lambda_function.load_lambda.function_name}:$LATEST"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
       "End": true
     }
   }
@@ -81,7 +104,7 @@ data "aws_iam_policy_document" "lambdas_state_machine_document" {
     actions = [
       "lambda:InvokeFunction"
     ]
-    resources = ["${aws_lambda_function.ingest_lambda.arn}:*", "${aws_lambda_function.process_lambda.arn}:*"]
+    resources = ["${aws_lambda_function.ingest_lambda.arn}:*", "${aws_lambda_function.process_lambda.arn}:*", "${aws_lambda_function.load_lambda.arn}:*"]
   }
 }
 
@@ -132,7 +155,7 @@ resource "aws_iam_role_policy_attachment" "eventbridge_states_policy_attachment"
 }
 
 resource "aws_cloudwatch_event_rule" "state_machine_scheduler" {
-  schedule_expression = "rate(2 minutes)"
+  schedule_expression = "rate(10 minutes)"
 }
 
 resource "aws_cloudwatch_event_target" "state_machine_every_30_min" {
