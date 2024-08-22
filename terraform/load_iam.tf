@@ -28,12 +28,8 @@ resource "aws_iam_role_policy_attachment" "cw_load_policy_attachemnt" {
 
 data "aws_iam_policy_document" "s3_load_document" {
   statement {
-    actions   = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]
+    actions   = ["s3:GetObject"]
     resources = ["${aws_s3_bucket.process_bucket.arn}/*"]
-  }
-  statement {
-    actions   = ["s3:ListBucket"]
-    resources = ["${aws_s3_bucket.process_bucket.arn}"]
   }
 }
 

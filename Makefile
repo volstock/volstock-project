@@ -27,11 +27,13 @@ requirements-ingest:
 	$(call execute_in_env, $(PIP) install pg8000 -t ./deployment-packages/ingest-layer/python/ --upgrade)
 
 requirements-process:
-	$(call execute_in_env, $(PIP) install requests -t ./deployment-packages/process-layer/python/ --upgrade)
-	$(call execute_in_env, $(PIP) install fastparquet -t ./deployment-packages/process-layer/python/ --upgrade)
+	$(call execute_in_env, $(PIP) install requests fastparquet -t ./deployment-packages/process-layer/python/ --upgrade)
+
+requirements-load:
+	$(call execute_in_env, $(PIP) install pg8000 fastparquet -t ./deployment-packages/load-layer/python/ --upgrade)
 
 
-requirements: create-environment requirements-ingest requirements-process
+requirements: create-environment requirements-ingest requirements-process requirements-load
 
 ################################################################################################################
 # Set Up
@@ -62,11 +64,13 @@ dev-setup: bandit safety flake pytest coverage
 ## Run the security test (bandit + safety)
 security-test:
 	$(call execute_in_env, $(PIP) freeze > ./requirements.txt)
-	$(call execute_in_env, $(PIP) freeze --path ./deployment-packages/layer-ingest/python/ > ./requirements-ingest.txt)
-	$(call execute_in_env, $(PIP) freeze --path ./deployment-packages/layer-process/python/ > ./requirements-process.txt)
+	$(call execute_in_env, $(PIP) freeze --path ./deployment-packages/ingest-layer/python/ > ./requirements-ingest.txt)
+	$(call execute_in_env, $(PIP) freeze --path ./deployment-packages/process-layer/python/ > ./requirements-process.txt)
+	$(call execute_in_env, $(PIP) freeze --path ./deployment-packages/load-layer/python/ > ./requirements-load.txt)
 	$(call execute_in_env, safety check -r ./requirements.txt)
 	$(call execute_in_env, safety check -r ./requirements-ingest.txt)
 	$(call execute_in_env, safety check -r ./requirements-process.txt)
+	$(call execute_in_env, safety check -r ./requirements-load.txt)
 	$(call execute_in_env, bandit -lll ./src/ ./test/)
 
 

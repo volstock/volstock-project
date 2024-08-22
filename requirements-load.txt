@@ -1,0 +1,13 @@
+asn1crypto==1.5.1
+cramjam==2.8.3
+fastparquet==2024.5.0
+fsspec==2024.6.1
+numpy==2.1.0
+packaging==24.1
+pandas==2.2.2
+pg8000==1.31.2
+python-dateutil==2.9.0.post0
+pytz==2024.1
+scramp==1.4.5
+six==1.16.0
+tzdata==2024.1

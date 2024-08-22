@@ -1,5 +1,5 @@
 
-data "archive_file" "process_lambda_deployment_package" {
+data "archive_file" "load_lambda_deployment_package" {
   type        = "zip"
   source_file = "${path.module}/../src/load.py"
   output_path = "${path.module}/../deployment-packages/load_lambda_code.zip"
