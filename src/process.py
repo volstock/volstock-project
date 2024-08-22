@@ -296,7 +296,24 @@ def get_fact_sales_order(df_sales_order):
         return (
             df_sales_order.rename(columns={"staff_id": "sales_staff_id"})
             .drop(columns=["created_at", "last_updated"])
-            .set_index("sales_record_id")
+            .set_index("sales_record_id")[
+                [
+                    "sales_order_id",
+                    "created_date",
+                    "created_time",
+                    "last_updated_date",
+                    "last_updated_time",
+                    "sales_staff_id",
+                    "counterparty_id",
+                    "units_sold",
+                    "unit_price",
+                    "currency_id",
+                    "design_id",
+                    "agreed_payment_date",
+                    "agreed_delivery_date",
+                    "agreed_delivery_location_id",
+                ]
+            ]
         )
     except Exception as e:
         raise ProcessError(f"Failed to get fact_sales_order. {e}")
@@ -342,7 +359,22 @@ def get_fact_payment(df_payment):
                 "company_ac_number",
                 "counterparty_ac_number",
             ]
-        ).set_index("payment_record_id")
+        ).set_index("payment_record_id")[
+            [
+                "payment_id",
+                "created_date",
+                "created_time",
+                "last_updated_date",
+                "last_updated_time",
+                "transaction_id",
+                "counterparty_id",
+                "payment_amount",
+                "currency_id",
+                "payment_type_id",
+                "paid",
+                "payment_date",
+            ]
+        ]
     except Exception as e:
         raise ProcessError(f"Failed to get fact_payment. {e}")
 
@@ -364,7 +396,24 @@ def get_fact_purchase_order(df_purchase_order):
         ].apply(lambda x: x[x.index(" ") + 1 :])
         return df_purchase_order.drop(columns=["created_at", "last_updated"]).set_index(
             "purchase_record_id"
-        )
+        )[
+            [
+                "purchase_order_id",
+                "created_date",
+                "created_time",
+                "last_updated_date",
+                "last_updated_time",
+                "staff_id",
+                "counterparty_id",
+                "item_code",
+                "item_quantity",
+                "item_unit_price",
+                "currency_id",
+                "agreed_delivery_date",
+                "agreed_payment_date",
+                "agreed_delivery_location_id",
+            ]
+        ]
     except Exception as e:
         raise ProcessError(f"Failed to get fact_purchase_order. {e}")
 
