@@ -50,10 +50,10 @@ class TestConnection:
     def test_get_secrets_from_sm(self):
         sm = boto3.client("secretsmanager", region_name="eu-west-2")
 
-        sm.create_secret(Name="wh_name", SecretString="wh_db")
-        sm.create_secret(Name="wh_host", SecretString="wh_host")
-        sm.create_secret(Name="wh_user", SecretString="wh_user")
-        sm.create_secret(Name="wh_pass", SecretString="wh_pass")
+        sm.create_secret(Name="wh_name_", SecretString="wh_db")
+        sm.create_secret(Name="wh_host_", SecretString="wh_host")
+        sm.create_secret(Name="wh_user_", SecretString="wh_user")
+        sm.create_secret(Name="wh_pass_", SecretString="wh_pass")
 
         response = get_secrets(sm)
         expected_secrets = ["wh_db", "wh_host", "wh_user", "wh_pass"]
