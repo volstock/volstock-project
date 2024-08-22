@@ -183,7 +183,7 @@ def get_dim_staff(df_staff, df_department):
                 "location",
                 "email_address",
             ]
-        ].set_index("staff_id")
+        ]
     except Exception as e:
         raise ProcessError(f"Failed to get dim_staff. {e}")
 
@@ -191,18 +191,14 @@ def get_dim_staff(df_staff, df_department):
 def get_dim_location(df_address):
     try:
         df_location = df_address.rename(columns={"address_id": "location_id"})
-        return df_location.drop(columns=["created_at", "last_updated"]).set_index(
-            "location_id"
-        )
+        return df_location.drop(columns=["created_at", "last_updated"])
     except Exception as e:
         raise ProcessError(f"Failed to get dim_location. {e}")
 
 
 def get_dim_design(df_design):
     try:
-        return df_design.drop(columns=["created_at", "last_updated"]).set_index(
-            "design_id"
-        )
+        return df_design.drop(columns=["created_at", "last_updated"])
     except Exception as e:
         raise ProcessError(f"Failed to get dim_design. {e}")
 
@@ -236,9 +232,7 @@ def get_dim_currency(df_currency):
             lsuffix="_c",
             rsuffix="_cn",
         )
-        return df_currency_codes_names.drop(
-            columns=["created_at", "last_updated"]
-        ).set_index("currency_id")
+        return df_currency_codes_names.drop(columns=["created_at", "last_updated"])
     except Exception as e:
         raise ProcessError(f"Failed to get dim_currency. {e}")
 
@@ -273,66 +267,21 @@ def get_dim_counterparty(df_counterparty, df_address):
                 "country": "counterparty_legal_country",
                 "phone": "counterparty_legal_phone_number",
             }
-        ).set_index("counterparty_id")
+        )
     except Exception as e:
         raise ProcessError(f"Failed to get dim_counterparty. {e}")
 
 
-def get_fact_sales_order(df_sales_order):
-    try:
-        df_sales_order["sales_record_id"] = range(1, len(df_sales_order) + 1)
-        df_sales_order["created_date"] = df_sales_order["created_at"].apply(
-            lambda x: x[: x.index(" ")]
-        )
-        df_sales_order["created_time"] = df_sales_order["created_at"].apply(
-            lambda x: x[x.index(" ") + 1 :]
-        )
-        df_sales_order["last_updated_date"] = df_sales_order["last_updated"].apply(
-            lambda x: x[: x.index(" ")]
-        )
-        df_sales_order["last_updated_time"] = df_sales_order["last_updated"].apply(
-            lambda x: x[x.index(" ") + 1 :]
-        )
-        return (
-            df_sales_order.rename(columns={"staff_id": "sales_staff_id"})
-            .drop(columns=["created_at", "last_updated"])
-            .set_index("sales_record_id")[
-                [
-                    "sales_order_id",
-                    "created_date",
-                    "created_time",
-                    "last_updated_date",
-                    "last_updated_time",
-                    "sales_staff_id",
-                    "counterparty_id",
-                    "units_sold",
-                    "unit_price",
-                    "currency_id",
-                    "design_id",
-                    "agreed_payment_date",
-                    "agreed_delivery_date",
-                    "agreed_delivery_location_id",
-                ]
-            ]
-        )
-    except Exception as e:
-        raise ProcessError(f"Failed to get fact_sales_order. {e}")
-
-
 def get_dim_payment_type(df_payment_type):
     try:
-        return df_payment_type.drop(columns=["created_at", "last_updated"]).set_index(
-            "payment_type_id"
-        )
+        return df_payment_type.drop(columns=["created_at", "last_updated"])
     except Exception as e:
         raise ProcessError(f"Failed to get dim_payment_type. {e}")
 
 
 def get_dim_transaction(df_transaction):
     try:
-        return df_transaction.drop(columns=["created_at", "last_updated"]).set_index(
-            "transaction_id"
-        )
+        return df_transaction.drop(columns=["created_at", "last_updated"])
     except Exception as e:
         raise ProcessError(f"Failed to get dim_transaction. {e}")
 
@@ -418,6 +367,47 @@ def get_fact_purchase_order(df_purchase_order):
         raise ProcessError(f"Failed to get fact_purchase_order. {e}")
 
 
+def get_fact_sales_order(df_sales_order):
+    try:
+        df_sales_order["sales_record_id"] = range(1, len(df_sales_order) + 1)
+        df_sales_order["created_date"] = df_sales_order["created_at"].apply(
+            lambda x: x[: x.index(" ")]
+        )
+        df_sales_order["created_time"] = df_sales_order["created_at"].apply(
+            lambda x: x[x.index(" ") + 1 :]
+        )
+        df_sales_order["last_updated_date"] = df_sales_order["last_updated"].apply(
+            lambda x: x[: x.index(" ")]
+        )
+        df_sales_order["last_updated_time"] = df_sales_order["last_updated"].apply(
+            lambda x: x[x.index(" ") + 1 :]
+        )
+        return (
+            df_sales_order.rename(columns={"staff_id": "sales_staff_id"})
+            .drop(columns=["created_at", "last_updated"])
+            .set_index("sales_record_id")[
+                [
+                    "sales_order_id",
+                    "created_date",
+                    "created_time",
+                    "last_updated_date",
+                    "last_updated_time",
+                    "sales_staff_id",
+                    "counterparty_id",
+                    "units_sold",
+                    "unit_price",
+                    "currency_id",
+                    "design_id",
+                    "agreed_payment_date",
+                    "agreed_delivery_date",
+                    "agreed_delivery_location_id",
+                ]
+            ]
+        )
+    except Exception as e:
+        raise ProcessError(f"Failed to get fact_sales_order. {e}")
+
+
 def get_dim_date():
     try:
         timestamps = pd.date_range(
@@ -435,7 +425,7 @@ def get_dim_date():
         dim_date["day_name"] = dim_date["date_id"].dt.day_name()
         dim_date["month_name"] = dim_date["date_id"].dt.month_name()
         dim_date["quarter"] = dim_date["date_id"].dt.quarter
-        return dim_date.set_index("date_id")
+        return dim_date
     except Exception as e:
         raise ProcessError(f"Failed to get dim_date. {e}")
 
