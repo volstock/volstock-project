@@ -17,7 +17,8 @@ from src.process import (
     get_dim_transaction,
     get_fact_payment,
     get_fact_purchase_order,
-    lambda_handler,
+    get_fact_sales_order,
+    lambda_handler
 )
 
 
@@ -470,4 +471,27 @@ def test_get_fact_purchase_order():
     assert result_df.loc[1, "created_time"] == "08:00:00"
     assert result_df.loc[1, "last_updated_date"] == "2023-02-01"
     assert result_df.loc[1, "last_updated_time"] == "08:30:00"
-    
+
+def test_get_fact_sales_order_returns_correct_output():
+    mock_df = pd.DataFrame({
+        'staff_id': [1, 2],
+        'created_at': ['2024-08-20 10:15:20', '2024-08-20 11:22:33'],
+        'last_updated': ['2024-08-21 12:24:36', '2024-08-20 11:22:33']
+    })
+
+    expected_df = pd.DataFrame({
+        'sales_staff_id': [101, 102],
+        'created_date': ['2023-08-15', '2023-08-16'],
+        'created_time': ['10:15:30', '11:20:45'],
+        'last_updated_date': ['2023-08-17', '2023-08-18'],
+        'last_updated_time': ['12:30:00', '13:35:15']
+    }, index=pd.Index([1, 2], name='sales_record_id'))
+
+    result_df = get_fact_sales_order(mock_df)
+
+    try:
+        pd.testing.assert_frame_equal(result_df, expected_df)
+        print("Test passed! The result matches the expected DataFrame.")
+    except AssertionError as e:
+        print("Test failed! The result does not match the expected DataFrame.")
+        print(e)
