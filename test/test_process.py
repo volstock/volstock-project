@@ -63,19 +63,21 @@ def test_table_json_to_dataframe_success(s3):
 
 
 def test_table_json_to_dataframe_client_error(s3):
-    s3.get_object.side_effect = ClientError(
-        {"Error": {"Code": "NoSuchKey", "Message": "The specified key does not exist."}},
-        "GetObject"
-    )
+    with patch('src.process.get_date', return_value="2024-08-20 10:14"):
 
-    with pytest.raises(ProcessError) as exc_info:
-        get_dataframe_from_table_json(S3_BUCKET, TABLE_NAME)
+        s3.get_object.side_effect = ClientError(
+            {"Error": {"Code": "NoSuchKey", "Message": "The specified key does not exist."}},
+            "GetObject"
+        )
 
-    assert "Failed to get table json." in str(exc_info.value)
-    s3.get_object.assert_called_once_with(
-        Bucket=S3_BUCKET,
-        Key=f"latest/2024-08-20 10:14/{TABLE_NAME}.json"
-    )
+        with pytest.raises(ProcessError) as exc_info:
+            get_dataframe_from_table_json(S3_BUCKET, TABLE_NAME)
+
+        assert "Failed to get table json." in str(exc_info.value)
+        s3.get_object.assert_called_once_with(
+            Bucket=S3_BUCKET,
+            Key=f"latest/2024-08-20 10:14/{TABLE_NAME}.json"
+        )
 
 
 @patch("src.process.get_bucket_name")
@@ -131,14 +133,27 @@ def test_get_dim_staff(sample_staff, sample_department):
 
     pd.testing.assert_frame_equal(result, expected)
 
-def test_get_dim_location(sample_address):
-    result = get_dim_location(sample_address)
-    expected = pd.DataFrame({
-        "location_id": [100, 200, 300],
-        "address_line_1": ["123 Main St", "456 Elm St", "789 Oak St"],
-        "city": ["Metropolis", "Gotham", "Star City"]
+def test_get_dim_location():
+
+    sample_address = pd.DataFrame({
+        "address_id": [1, 2, 3],
+        "address_line_1": ["6826 Herzog Via", "179 Alexie Cliffs", "148 Sincere Fort"],
+        "city": ["Kendraburgh", "Suffolk", "Pricetown"],
+        "created_at": ["2022-11-03 14:20:49.962000", "2022-11-03 14:20:49.962000", "2022-11-03 14:20:49.962000"],
+        "last_updated": ["2022-11-03 14:20:49.962000", "2022-11-03 14:20:49.962000", "2022-11-03 14:20:49.962000"]
     })
+
+    expected = pd.DataFrame({
+        "address_line_1": ["6826 Herzog Via", "179 Alexie Cliffs", "148 Sincere Fort"],
+        "city": ["Kendraburgh", "Suffolk", "Pricetown"]
+    }, index=[1, 2, 3])
+    
+    expected.index.name = "location_id"
+
+    result = get_dim_location(sample_address)
+
     pd.testing.assert_frame_equal(result, expected)
+
 
 
 def test_get_dim_design():
