@@ -1,8 +1,18 @@
 import boto3
 import os
 import pg8000.native
+import io
+import pandas as pd
+from dotenv import load_dotenv
+from pprint import pprint
+
+load_dotenv()
+
+class LoadError(Exception):
+    pass
 
 def lambda_handler(event, context):
+    S3_PROCESS_BUCKET = get_bucket_name("S3_PROCESS_BUCKET")
     conn = get_connection()
     query = """
     SELECT table_name 
@@ -13,6 +23,13 @@ def lambda_handler(event, context):
     print("Tables in the database:")
     for table in table_names:
         print(table[0])
+
+def get_bucket_name(bucket_name):
+    try:
+        bucket = os.environ[bucket_name]
+        return bucket
+    except KeyError as e:
+        raise LoadError(f"Failed to get env bucket name. {e}")
 
 def get_secrets(sm):
     """
@@ -43,3 +60,17 @@ def get_connection():
     """
     sm = boto3.client("secretsmanager", region_name="eu-west-2")
     return pg8000.native.Connection(**get_secrets(sm))
+
+
+def get_df_from_parquet():
+    buffer = io.BytesIO()
+    s3 = boto3.client('s3')
+    bucket = get_bucket_name("S3_PROCESS_BUCKET")
+    response = s3.list_objects(
+        Bucket = bucket
+    )
+    answer = []
+    for object in response['Contents']:
+        answer.append(object['Key'])
+    print(answer)
+
