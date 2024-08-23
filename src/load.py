@@ -44,10 +44,10 @@ def get_secrets(sm):
     - A dictionary containing Data warehouse credentials including:
         - 'database','host','user','password'
     """
-    db = sm.get_secret_value(SecretId="wh_name_")["SecretString"]
-    host = sm.get_secret_value(SecretId="wh_host_")["SecretString"]
-    user = sm.get_secret_value(SecretId="wh_user_")["SecretString"]
-    password = sm.get_secret_value(SecretId="wh_pass_")["SecretString"]
+    db = sm.get_secret_value(SecretId="whdb_name")["SecretString"]
+    host = sm.get_secret_value(SecretId="whdb_host")["SecretString"]
+    user = sm.get_secret_value(SecretId="whdb_user")["SecretString"]
+    password = sm.get_secret_value(SecretId="whdb_pass")["SecretString"]
     return {"database": db, "host": host, "user": user, "password": password}
 
 
