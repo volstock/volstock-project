@@ -3,28 +3,33 @@ import os
 import pg8000.native
 import io
 import pandas as pd
-from dotenv import load_dotenv
+from dotenv import load_dotenv #remove in final version
 from pprint import pprint
 
-load_dotenv()
 
 class LoadError(Exception):
     pass
 
 def lambda_handler(event, context):
+    load_dotenv() #remove in final version
     S3_PROCESS_BUCKET = get_bucket_name("S3_PROCESS_BUCKET")
     conn = get_connection()
-    query = """
-    SELECT table_name 
-    FROM information_schema.tables 
-    WHERE table_schema = 'project_team_4'
-    """
-    table_names = conn.run(query)
-    print("Tables in the database:")
-    for table in table_names:
-        print(table[0])
 
-    for 
+    #get a list of keys from the process bucket
+    s3 = boto3.client('s3')
+    bucket = get_bucket_name("S3_PROCESS_BUCKET")
+    s3_response = s3.list_objects(
+        Bucket = bucket
+    )
+    parquet_file_keys = [object['Key'] for object in s3_response['Contents']]
+
+    #loop over that list of parquet file keys
+    for parquet_file_key in parquet_file_keys:
+        #pass that key to our get_df_from_parquet
+        print(parquet_file_key, '>>>>>>>>>>')
+        parquet_file = get_df_from_parquet(parquet_file_key)
+        pprint(parquet_file)
+        
 
 def get_bucket_name(bucket_name):
     try:
@@ -44,12 +49,11 @@ def get_secrets(sm):
     - A dictionary containing Data warehouse credentials including:
         - 'database','host','user','password'
     """
-    db = sm.get_secret_value(SecretId="wh_name_")["SecretString"]
-    host = sm.get_secret_value(SecretId="wh_host_")["SecretString"]
-    user = sm.get_secret_value(SecretId="wh_user_")["SecretString"]
-    password = sm.get_secret_value(SecretId="wh_pass_")["SecretString"]
+    db = sm.get_secret_value(SecretId="whdb_name")["SecretString"]
+    host = sm.get_secret_value(SecretId="whdb_host")["SecretString"]
+    user = sm.get_secret_value(SecretId="whdb_user")["SecretString"]
+    password = sm.get_secret_value(SecretId="whdb_pass")["SecretString"]
     return {"database": db, "host": host, "user": user, "password": password}
-
 
 def get_connection():
     """
@@ -64,24 +68,17 @@ def get_connection():
     return pg8000.native.Connection(**get_secrets(sm))
 
 
-def get_df_from_parquet():
-    buffer = io.BytesIO()
+def get_df_from_parquet(parquet_file_key):
     s3 = boto3.client('s3')
     bucket = get_bucket_name("S3_PROCESS_BUCKET")
-    response = s3.list_objects(
-        Bucket = bucket
-    )
-    answer = []
-    for object in response['Contents']:
-        answer.append(object['Key'])
-
-    reaction = s3.get_object(
+    parquet_file_object = s3.get_object(
         Bucket = bucket,
-        Key = answer[0]
+        Key = parquet_file_key
     )
-    parquet_file = io.BytesIO(reaction["Body"].read())
+
+    parquet_file = io.BytesIO(parquet_file_object["Body"].read())
     df = pd.read_parquet(parquet_file)
-    print(df)
+    return df 
 
 
-
+    
