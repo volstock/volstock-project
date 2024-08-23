@@ -12,7 +12,7 @@ resource "aws_lambda_function" "load_lambda" {
   role             = aws_iam_role.load_lambda_role.arn
   handler          = "load.lambda_handler"
   source_code_hash = filebase64sha256(data.archive_file.load_lambda_deployment_package.output_path)
-  timeout          = 60
+  timeout          = 900
   runtime          = "python3.12"
   layers           = [aws_lambda_layer_version.load_layer.arn]
   environment {
