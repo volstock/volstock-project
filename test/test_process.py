@@ -172,7 +172,7 @@ def test_get_dim_staff(sample_staff, sample_department):
                 "doe@example.com",
             ],
         }
-    ).set_index("staff_id")
+    )
 
     assert expected.equals(result)
 
@@ -221,7 +221,7 @@ def test_get_dim_location(sample_address_alt):
             ],
             "city": ["Kendraburgh", "Suffolk", "Pricetown"],
         },
-    ).set_index("location_id")
+    )
     result = get_dim_location(sample_address_alt)
     assert expected.equals(result)
 
@@ -262,13 +262,12 @@ def sample_design():
 
 def test_get_dim_design(sample_design):
     result_df = get_dim_design(sample_design)
-    expected_columns = ["design_name", "file_location", "file_name"]
+    expected_columns = ["design_id", "design_name", "file_location", "file_name"]
 
     assert isinstance(result_df, pd.DataFrame)
     assert "created_at" not in result_df.columns
     assert "last_updated" not in result_df.columns
     assert all(col in result_df.columns for col in expected_columns)
-    assert result_df.index.name == "design_id"
     assert len(result_df) == len(sample_design)
 
 
@@ -355,17 +354,15 @@ def test_get_dim_currency(sample_currency):
         mock_get_names.return_value = mock_currency_names
 
         result_df = get_dim_currency(sample_currency)
-        expected_columns = ["currency_code", "currency_name"]
+        expected_columns = ["currency_id", "currency_code", "currency_name"]
         expected_names = ["US Dollar", "Euro", "British Pound"]
 
         assert isinstance(result_df, pd.DataFrame)
         assert "created_at" not in result_df.columns
         assert "last_updated" not in result_df.columns
         assert all(col in result_df.columns for col in expected_columns)
-        assert result_df.index.name == "currency_id"
         assert result_df["currency_name"].tolist() == expected_names
         assert result_df["currency_code"].tolist() == ["usd", "eur", "gbp"]
-        assert list(result_df.index) == [1, 2, 3]
 
         mock_get_names.assert_called_once()
 
@@ -415,7 +412,7 @@ def test_get_dim_counterparty(sample_counterparty, sample_address_alt_2):
     result_df = get_dim_counterparty(sample_counterparty, sample_address_alt_2)
 
     expected_columns = [
-        "counterparty_legal_name",
+        "counterparty_id" "counterparty_legal_name",
         "counterparty_legal_address_line_1",
         "counterparty_legal_address_line_2",
         "counterparty_legal_district",
@@ -431,7 +428,6 @@ def test_get_dim_counterparty(sample_counterparty, sample_address_alt_2):
     assert result_df.loc[1, "counterparty_legal_name"] == "Fahey and Sons"
     assert result_df.loc[2, "counterparty_legal_address_line_1"] == "456 Maple Ave"
     assert result_df.loc[3, "counterparty_legal_phone_number"] == "555-9876"
-    assert list(result_df.index) == [1, 2, 3]
 
 
 @patch("pandas.DataFrame.join")
@@ -472,18 +468,16 @@ def sample_payment_type():
 def test_get_dim_payment_type(sample_payment_type):
 
     result_df = get_dim_payment_type(sample_payment_type)
-    expected_columns = ["payment_type_name"]
+    expected_columns = ["payment_type_id", "payment_type_name"]
 
     assert isinstance(result_df, pd.DataFrame)
     assert "created_at" not in result_df.columns
     assert "last_updated" not in result_df.columns
     assert all(col in result_df.columns for col in expected_columns)
-    assert result_df.index.name == "payment_type_id"
-    assert list(result_df.index) == [1, 2, 3, 4]
-    assert result_df.loc[1, "payment_type_name"] == "SALES_RECEIPT"
-    assert result_df.loc[2, "payment_type_name"] == "SALES_REFUND"
-    assert result_df.loc[3, "payment_type_name"] == "PURCHASE_PAYMENT"
-    assert result_df.loc[4, "payment_type_name"] == "PURCHASE_REFUND"
+    assert result_df.loc[0, "payment_type_name"] == "SALES_RECEIPT"
+    assert result_df.loc[1, "payment_type_name"] == "SALES_REFUND"
+    assert result_df.loc[2, "payment_type_name"] == "PURCHASE_PAYMENT"
+    assert result_df.loc[3, "payment_type_name"] == "PURCHASE_REFUND"
 
 
 @patch("pandas.DataFrame.drop")
@@ -509,19 +503,17 @@ def sample_transaction():
 
 def test_get_dim_transaction_type(sample_transaction):
     result_df = get_dim_transaction(sample_transaction)
-    expected_columns = ["transaction_type", "sales_order_id"]
+    expected_columns = ["transaction_id", "transaction_type", "sales_order_id"]
 
     assert isinstance(result_df, pd.DataFrame)
     assert "created_at" not in result_df.columns
     assert "last_updated" not in result_df.columns
     assert all(col in result_df.columns for col in expected_columns)
-    assert result_df.index.name == "transaction_id"
-    assert list(result_df.index) == [1, 2]
 
-    assert result_df.loc[1, "transaction_type"] == "PURCHASE"
-    assert result_df.loc[1, "sales_order_id"] == 1
-    assert result_df.loc[2, "transaction_type"] == "SALE"
-    assert result_df.loc[2, "sales_order_id"] == 2
+    assert result_df.loc[0, "transaction_type"] == "PURCHASE"
+    assert result_df.loc[0, "sales_order_id"] == 1
+    assert result_df.loc[1, "transaction_type"] == "SALE"
+    assert result_df.loc[1, "sales_order_id"] == 2
 
 
 @patch("pandas.DataFrame.drop")
@@ -537,11 +529,17 @@ def sample_payment():
     return pd.DataFrame(
         {
             "payment_id": [2, 3, 5],
-            "amount": [
+            "payment_amount": [
                 "552548.62",
                 "205952.22",
                 "57067.20",
             ],  # Ensure amount is treated as float
+            "transaction_id": [1, 2, 3],
+            "counterparty_id": [2, 3, 4],
+            "currency_id": [1, 2, 3],
+            "payment_type_id": [1, 2, 3],
+            "paid": [10, 12, 15],
+            "payment_date": ["2023-01-01", "2023-01-02", "2023-01-03"],
             "created_at": [
                 "2022-11-03 14:20:52.187000",
                 "2022-11-03 14:20:52.186000",
@@ -565,11 +563,18 @@ def sample_payment():
 def test_get_fact_payment(sample_payment):
     result_df = get_fact_payment(sample_payment)
     expected_columns = [
-        "amount",
+        "payment_id",
         "created_date",
         "created_time",
         "last_updated_date",
         "last_updated_time",
+        "transaction_id",
+        "counterparty_id",
+        "payment_amount",
+        "currency_id",
+        "payment_type_id",
+        "paid",
+        "payment_date",
     ]
 
     assert isinstance(result_df, pd.DataFrame)
@@ -581,7 +586,7 @@ def test_get_fact_payment(sample_payment):
     assert result_df.index.name == "payment_record_id"
     assert list(result_df.index) == [1, 2, 3]
 
-    assert result_df.loc[1, "amount"] == "552548.62"
+    assert result_df.loc[1, "payment_amount"] == "552548.62"
     assert result_df.loc[1, "created_date"] == "2022-11-03"
     assert result_df.loc[1, "created_time"] == "14:20:52.187000"
     assert result_df.loc[1, "last_updated_date"] == "2022-11-03"
@@ -612,6 +617,14 @@ def sample_purchase_order():
                 "2023-02-02 10:00:00",
                 "2023-02-03 12:15:00",
             ],
+            "staff_id": [1, 2, 3],
+            "counterparty_id": [1, 4, 2],
+            "item_code": [1, 2, 3],
+            "item_unit_price": [10, 15, 20],
+            "currency_id": [2, 3, 4],
+            "agreed_delivery_date": ["2023-01-01", "2023-01-02", "2023-01-03"],
+            "agreed_payment_date": ["2023-01-01", "2023-01-02", "2023-01-03"],
+            "agreed_delivery_location_id": [2, 3, 6],
         }
     )
 
@@ -621,11 +634,19 @@ def test_get_fact_purchase_order(sample_purchase_order):
 
     expected_columns = [
         "purchase_order_id",
-        "item_quantity",
         "created_date",
         "created_time",
         "last_updated_date",
         "last_updated_time",
+        "staff_id",
+        "counterparty_id",
+        "item_code",
+        "item_quantity",
+        "item_unit_price",
+        "currency_id",
+        "agreed_delivery_date",
+        "agreed_payment_date",
+        "agreed_delivery_location_id",
     ]
 
     assert isinstance(result_df, pd.DataFrame)
@@ -667,6 +688,14 @@ def sample_sales_order():
                 "2023-02-03 12:15:00",
             ],
             "staff_id": [1, 2, 1],
+            "counterparty_id": [2, 3, 1],
+            "units_sold": [10, 5, 20],
+            "unit_price": [20, 20, 24],
+            "currency_id": [2, 1, 1],
+            "design_id": [1, 2, 3],
+            "agreed_payment_date": ["2023-01-01", "2023-01-02", "2023-01-03"],
+            "agreed_delivery_date": ["2023-01-01", "2023-01-02", "2023-01-03"],
+            "agreed_delivery_location_id": [1, 2, 3],
         }
     )
 
@@ -677,14 +706,22 @@ def test_get_fact_sales_order(sample_sales_order):
         {
             "sales_record_id": [1, 2, 3],
             "sales_order_id": [1, 3, 4],
-            "sales_staff_id": [1, 2, 1],
             "created_date": ["2023-02-01", "2023-02-02", "2023-02-03"],
             "created_time": ["08:00:00", "09:30:00", "11:45:00"],
             "last_updated_date": ["2023-02-01", "2023-02-02", "2023-02-03"],
             "last_updated_time": ["08:30:00", "10:00:00", "12:15:00"],
+            "sales_staff_id": [1, 2, 1],
+            "counterparty_id": [2, 3, 1],
+            "units_sold": [10, 5, 20],
+            "unit_price": [20, 20, 24],
+            "currency_id": [2, 1, 1],
+            "design_id": [1, 2, 3],
+            "agreed_payment_date": ["2023-01-01", "2023-01-02", "2023-01-03"],
+            "agreed_delivery_date": ["2023-01-01", "2023-01-02", "2023-01-03"],
+            "agreed_delivery_location_id": [1, 2, 3],
         }
-    ).set_index("sales_record_id")
-    print(expected.__str__())
+    ).set_index('sales_record_id')
+    print(expected)
     print(fact_sales_order)
     assert expected.equals(fact_sales_order)
 
@@ -714,7 +751,6 @@ def test_get_dim_date(mock_date_range):
     expected["day_name"] = expected["date_id"].dt.day_name()
     expected["month_name"] = expected["date_id"].dt.month_name()
     expected["quarter"] = expected["date_id"].dt.quarter
-    expected = expected.set_index("date_id")
     assert expected.equals(result)
 
 
@@ -831,4 +867,3 @@ def test_lambda_handler(
             "dim_date",
         ],
     }
-
