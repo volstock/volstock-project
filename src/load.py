@@ -11,11 +11,10 @@ class LoadError(Exception):
     pass
 
 def lambda_handler(event, context):
-    load_dotenv() #remove in final version
+    load_dotenv() 
     S3_PROCESS_BUCKET = get_bucket_name("S3_PROCESS_BUCKET")
     conn = get_connection()
 
-    #get a list of keys from the process bucket
     s3 = boto3.client('s3')
     bucket = get_bucket_name("S3_PROCESS_BUCKET")
     s3_response = s3.list_objects(
@@ -23,13 +22,9 @@ def lambda_handler(event, context):
     )
     parquet_file_keys = [object['Key'] for object in s3_response['Contents']]
 
-    #loop over that list of parquet file keys
     for parquet_file_key in parquet_file_keys:
-        #pass that key to our get_df_from_parquet
-        print(parquet_file_key, '>>>>>>>>>>')
         parquet_file = get_df_from_parquet(parquet_file_key)
-        pprint(parquet_file)
-        
+        #do something with this parquet file e.g. insert into data warehouse
 
 def get_bucket_name(bucket_name):
     try:
@@ -81,4 +76,4 @@ def get_df_from_parquet(parquet_file_key):
     return df 
 
 
-    
+
