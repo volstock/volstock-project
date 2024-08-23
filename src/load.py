@@ -24,6 +24,8 @@ def lambda_handler(event, context):
     for table in table_names:
         print(table[0])
 
+    for 
+
 def get_bucket_name(bucket_name):
     try:
         bucket = os.environ[bucket_name]
@@ -72,5 +74,14 @@ def get_df_from_parquet():
     answer = []
     for object in response['Contents']:
         answer.append(object['Key'])
-    print(answer)
+
+    reaction = s3.get_object(
+        Bucket = bucket,
+        Key = answer[0]
+    )
+    parquet_file = io.BytesIO(reaction["Body"].read())
+    df = pd.read_parquet(parquet_file)
+    print(df)
+
+
 
