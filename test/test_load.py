@@ -1,15 +1,10 @@
-from datetime import datetime
-import json
 from moto import mock_aws
 import os
 import boto3
 import pytest
 import unittest
 from unittest.mock import patch, MagicMock
-from src.load import (
-    get_connection,
-    get_secrets
-)
+from src.load import get_connection, get_secrets
 
 
 @pytest.fixture(scope="function")
@@ -50,10 +45,10 @@ class TestConnection:
     def test_get_secrets_from_sm(self):
         sm = boto3.client("secretsmanager", region_name="eu-west-2")
 
-        sm.create_secret(Name="wh_name_", SecretString="wh_db")
-        sm.create_secret(Name="wh_host_", SecretString="wh_host")
-        sm.create_secret(Name="wh_user_", SecretString="wh_user")
-        sm.create_secret(Name="wh_pass_", SecretString="wh_pass")
+        sm.create_secret(Name="whdb_name", SecretString="wh_db")
+        sm.create_secret(Name="whdb_host", SecretString="wh_host")
+        sm.create_secret(Name="whdb_user", SecretString="wh_user")
+        sm.create_secret(Name="whdb_pass", SecretString="wh_pass")
 
         response = get_secrets(sm)
         expected_secrets = ["wh_db", "wh_host", "wh_user", "wh_pass"]
@@ -61,7 +56,7 @@ class TestConnection:
             unittest.TestCase().assertIn(stored_secret, expected_secrets)
 
     @patch("boto3.client")
-    @patch("pg8000.native.Connection")
+    @patch("pg8000.dbapi.connect")
     @patch("src.load.get_secrets")
     def test_database_params_call(self, mock_get_secrets, mock_pg_conn, mock_boto_ct):
         mock_sm_client = MagicMock()

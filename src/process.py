@@ -29,7 +29,7 @@ def lambda_handler(event, context):
                 dim_staff = get_dim_staff(df_staff, df_department)
                 dim_staff_parquet = df_to_parquet(dim_staff)
                 store_parquet_file(S3_PROCESS_BUCKET, dim_staff_parquet, "dim_staff")
-                update_tables_names.append("dim_staff")
+                insert_table_to_update_tables_arr(update_tables_names, "dim_staff")
             elif table_name == "address":
                 df_address = get_dataframe_from_table_json(S3_INGEST_BUCKET, table_name)
                 dim_location = get_dim_location(df_address)
@@ -37,13 +37,13 @@ def lambda_handler(event, context):
                 store_parquet_file(
                     S3_PROCESS_BUCKET, dim_location_parquet, "dim_location"
                 )
-                update_tables_names.append("dim_location")
+                insert_table_to_update_tables_arr(update_tables_names, "dim_location")
             elif table_name == "design":
                 df_design = get_dataframe_from_table_json(S3_INGEST_BUCKET, table_name)
                 dim_design = get_dim_design(df_design)
                 dim_design_parquet = df_to_parquet(dim_design)
                 store_parquet_file(S3_PROCESS_BUCKET, dim_design_parquet, "dim_design")
-                update_tables_names.append("dim_design")
+                insert_table_to_update_tables_arr(update_tables_names, "dim_design")
             elif table_name == "currency":
                 df_currency = get_dataframe_from_table_json(
                     S3_INGEST_BUCKET, table_name
@@ -53,7 +53,7 @@ def lambda_handler(event, context):
                 store_parquet_file(
                     S3_PROCESS_BUCKET, dim_currency_parquet, "dim_currency"
                 )
-                update_tables_names.append("dim_currency")
+                insert_table_to_update_tables_arr(update_tables_names, "dim_currency")
             elif table_name == "counterparty":
                 df_counterparty = get_dataframe_from_table_json(
                     S3_INGEST_BUCKET, table_name
@@ -64,7 +64,9 @@ def lambda_handler(event, context):
                 store_parquet_file(
                     S3_PROCESS_BUCKET, dim_counterparty_parquet, "dim_counterparty"
                 )
-                update_tables_names.append("dim_counterparty")
+                insert_table_to_update_tables_arr(
+                    update_tables_names, "dim_counterparty"
+                )
             elif table_name == "sales_order":
                 df_sales_order = get_dataframe_from_table_json(
                     S3_INGEST_BUCKET, table_name
@@ -74,7 +76,9 @@ def lambda_handler(event, context):
                 store_parquet_file(
                     S3_PROCESS_BUCKET, fact_sales_order_parquet, "fact_sales_order"
                 )
-                update_tables_names.append("fact_sales_order")
+                insert_table_to_update_tables_arr(
+                    update_tables_names, "fact_sales_order"
+                )
             elif table_name == "transaction":
                 df_transaction = get_dataframe_from_table_json(
                     S3_INGEST_BUCKET, table_name
@@ -84,7 +88,9 @@ def lambda_handler(event, context):
                 store_parquet_file(
                     S3_PROCESS_BUCKET, dim_transaction_parquet, "dim_transaction"
                 )
-                update_tables_names.append("dim_transaction")
+                insert_table_to_update_tables_arr(
+                    update_tables_names, "dim_transaction"
+                )
             elif table_name == "payment_type":
                 df_payment_type = get_dataframe_from_table_json(
                     S3_INGEST_BUCKET, table_name
@@ -94,7 +100,9 @@ def lambda_handler(event, context):
                 store_parquet_file(
                     S3_PROCESS_BUCKET, dim_payment_type_parquet, "dim_payment_type"
                 )
-                update_tables_names.append("dim_payment_type")
+                insert_table_to_update_tables_arr(
+                    update_tables_names, "dim_payment_type"
+                )
             elif table_name == "payment":
                 df_payment = get_dataframe_from_table_json(S3_INGEST_BUCKET, table_name)
                 fact_payment = get_fact_payment(df_payment)
@@ -102,7 +110,7 @@ def lambda_handler(event, context):
                 store_parquet_file(
                     S3_PROCESS_BUCKET, fact_payment_parquet, "fact_payment"
                 )
-                update_tables_names.append("fact_payment")
+                insert_table_to_update_tables_arr(update_tables_names, "fact_payment")
             elif table_name == "purchase_order":
                 df_purchase_order = get_dataframe_from_table_json(
                     S3_INGEST_BUCKET, table_name
@@ -114,21 +122,28 @@ def lambda_handler(event, context):
                     fact_purchase_order_parquet,
                     "fact_purchase_order",
                 )
-                update_tables_names.append("fact_purchase_order")
+                insert_table_to_update_tables_arr(
+                    update_tables_names, "fact_purchase_order"
+                )
         local_vars = locals()
-        if (
-            "fact_sales_order" in local_vars
-            or "fact_payment" in local_vars
-            or "fact_purchase_order" in local_vars
-        ):
-            dim_date = get_dim_date()
+        if "fact_sales_order" in local_vars:
+            dim_date = get_dim_date(fact_sales_order)
             dim_date_parquet = df_to_parquet(dim_date)
             store_parquet_file(S3_PROCESS_BUCKET, dim_date_parquet, "dim_date")
-            update_tables_names.append("dim_date")
+            insert_table_to_update_tables_arr(update_tables_names, "dim_date")
         return {"msg": "Data process successful.", "tables": update_tables_names}
     except ProcessError as e:
         logging.critical(e)
         return {"msg": "Failed to process data", "err": str(e)}
+
+
+def insert_table_to_update_tables_arr(update_tables_names, table_name):
+    i = len(update_tables_names) - 1
+    update_tables_names.append(table_name)
+    while i >= 0 and table_name < update_tables_names[i]:
+        update_tables_names[i + 1] = update_tables_names[i]
+        i -= 1
+    update_tables_names[i + 1] = table_name
 
 
 def get_bucket_name(bucket_name):
@@ -408,10 +423,19 @@ def get_fact_sales_order(df_sales_order):
         raise ProcessError(f"Failed to get fact_sales_order. {e}")
 
 
-def get_dim_date():
+def get_dim_date(fact_sales_order):
     try:
-        timestamps = pd.date_range(
-            start="2022-11-01", end=pd.Timestamp.now().strftime(r"%Y-%m-%d")
+        timestamps = (
+            pd.concat(
+                [
+                    fact_sales_order["created_date"],
+                    fact_sales_order["last_updated_date"],
+                    fact_sales_order["agreed_payment_date"],
+                    fact_sales_order["agreed_delivery_date"],
+                ]
+            )
+            .drop_duplicates(ignore_index=True)
+            .apply(lambda x: pd.to_datetime(x))
         )
         dim_date = pd.DataFrame(
             {

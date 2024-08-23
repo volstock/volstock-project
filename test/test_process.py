@@ -720,7 +720,7 @@ def test_get_fact_sales_order(sample_sales_order):
             "agreed_delivery_date": ["2023-01-01", "2023-01-02", "2023-01-03"],
             "agreed_delivery_location_id": [1, 2, 3],
         }
-    ).set_index('sales_record_id')
+    ).set_index("sales_record_id")
     print(expected)
     print(fact_sales_order)
     assert expected.equals(fact_sales_order)
@@ -734,14 +734,23 @@ def test_get_fact_sales_order_error(mock_df_rename, sample_sales_order):
     assert str(e.value) == "Failed to get fact_sales_order. Mock exception"
 
 
-@patch("pandas.date_range")
-def test_get_dim_date(mock_date_range):
-    mock_datetime_index = pd.DatetimeIndex(["2024-08-01", "2024-08-22"])
-    mock_date_range.return_value = mock_datetime_index
-    result = get_dim_date()
+def test_get_dim_date(sample_sales_order):
+    result = get_dim_date(get_fact_sales_order(sample_sales_order))
+    timestamps = (
+        pd.concat(
+            [
+                sample_sales_order["created_date"],
+                sample_sales_order["last_updated_date"],
+                sample_sales_order["agreed_payment_date"],
+                sample_sales_order["agreed_delivery_date"],
+            ]
+        )
+        .drop_duplicates(ignore_index=True)
+        .apply(lambda x: pd.to_datetime(x))
+    )
     expected = pd.DataFrame(
         {
-            "date_id": mock_datetime_index,
+            "date_id": timestamps,
         }
     )
     expected["year"] = expected["date_id"].dt.year
@@ -753,12 +762,11 @@ def test_get_dim_date(mock_date_range):
     expected["quarter"] = expected["date_id"].dt.quarter
     assert expected.equals(result)
 
-
-@patch("pandas.date_range")
-def test_get_dim_date_error(mock_date_range):
-    mock_date_range.side_effect = Exception("Mock exception")
+@patch("pandas.concat")
+def test_get_dim_date_error(mock_concat, sample_sales_order):
+    mock_concat.side_effect = Exception("Mock exception")
     with pytest.raises(ProcessError) as e:
-        get_dim_date()
+        get_dim_date(get_fact_sales_order(sample_sales_order))
     assert str(e.value) == "Failed to get dim_date. Mock exception"
 
 
@@ -854,16 +862,16 @@ def test_lambda_handler(
     assert lambda_handler(event, "") == {
         "msg": "Data process successful.",
         "tables": [
-            "dim_location",
-            "dim_staff",
-            "fact_payment",
-            "dim_transaction",
-            "dim_currency",
-            "dim_payment_type",
-            "fact_sales_order",
             "dim_counterparty",
-            "fact_purchase_order",
-            "dim_design",
+            "dim_currency",
             "dim_date",
+            "dim_design",
+            "dim_location",
+            "dim_payment_type",
+            "dim_staff",
+            "dim_transaction",
+            "fact_payment",
+            "fact_purchase_order",
+            "fact_sales_order",
         ],
     }
