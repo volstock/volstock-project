@@ -16,18 +16,10 @@ class LoadError(Exception):
 
 def lambda_handler(event, context):
     try:
-        S3_PROCESS_BUCKET = get_bucket_name("S3_PROCESS_BUCKET")
-        conn = get_connection()
+        sm = boto3.client("secretsmanager", region_name="eu-west-2")
+        conn = get_connection(sm)
         changed_tables = event["tables"]
-        table_queries = { #A table containing the queries needed to insert data into the table
-            "dim_design": get_dim_design_query,
-            "dim_staff": get_dim_staff_query,
-            "dim_location": get_dim_location_query,
-            "dim_currency": get_dim_currency_query,
-            "dim_counterparty": get_dim_counterparty_query,
-            "dim_date": get_dim_date_query,
-            "fact_sales_order": get_fact_sales_order_query
-        }
+        table_queries = get_table_queries()
 
         for table in changed_tables:
             if table in table_queries:
@@ -41,11 +33,21 @@ def lambda_handler(event, context):
         logging.critical(e)
         return {"msg": "Failed to load data into warehouse", "err": str(e)}
 
+def get_table_queries():
+    return { #A table containing the queries needed to insert data into the table
+            "dim_design": get_dim_design_query,
+            "dim_staff": get_dim_staff_query,
+            "dim_location": get_dim_location_query,
+            "dim_currency": get_dim_currency_query,
+            "dim_counterparty": get_dim_counterparty_query,
+            "dim_date": get_dim_date_query,
+            "fact_sales_order": get_fact_sales_order_query
+        }
+
 
 def get_bucket_name(bucket_name):
     try:
-        bucket = os.environ[bucket_name]
-        return bucket
+        return os.environ[bucket_name]
     except KeyError as e:
         raise LoadError(f"Failed to get env bucket name. {e}")
 
@@ -71,7 +73,7 @@ def get_secrets(sm):
         raise LoadError(f"Failed to get secrets. {e}")
 
 
-def get_connection():
+def get_connection(sm):
     """
     Establishes a connection to the Data Warehouse using credentials from
     AWS Secrets Manager.
@@ -81,7 +83,6 @@ def get_connection():
 
     """
     try:
-        sm = boto3.client("secretsmanager", region_name="eu-west-2")
         return pg8000.dbapi.connect(**get_secrets(sm))
     except DatabaseError as e:
         raise LoadError(f"Failed to get connection. {e}")
@@ -126,8 +127,8 @@ def get_dim_design_query():
             file_location,
             file_name
         )
-        VALUES (%s, %s, %s, %s)
-    """
+        VALUES (%s, %s, %s, %s) 
+    """ #explore whether I can use named parameters instead
     return query
 
 
