@@ -19,7 +19,7 @@ def lambda_handler(event, context):
         S3_PROCESS_BUCKET = get_bucket_name("S3_PROCESS_BUCKET")
         conn = get_connection()
         changed_tables = event["tables"]
-        table_queries = {
+        table_queries = { #A table containing the queries needed to insert data into the table
             "dim_design": get_dim_design_query,
             "dim_staff": get_dim_staff_query,
             "dim_location": get_dim_location_query,
@@ -31,7 +31,7 @@ def lambda_handler(event, context):
 
         for table in changed_tables:
             if table in table_queries:
-                df = get_table_df_from_parquet(S3_PROCESS_BUCKET, table)
+                df = get_df_from_parquet(f"{table}.parquet")
                 query = table_queries[table]
                 rows = get_dataframe_values(df)
                 store_table_in_wh(conn, query, rows, table)
@@ -85,17 +85,18 @@ def get_connection():
     except DatabaseError as e:
         raise LoadError(f"Failed to get connection. {e}")
 
+def get_df_from_parquet(parquet_file_key):
+    s3 = boto3.client('s3')
+    bucket = get_bucket_name("S3_PROCESS_BUCKET")
+    parquet_file_object = s3.get_object(
+        Bucket = bucket,
+        Key = parquet_file_key
+    )
 
-def get_table_df_from_parquet(bucket, parquet_name):
-    try:
-        s3 = boto3.client("s3", region_name="eu-west-2")
-        buffer = io.BytesIO()
-        s3.download_fileobj(
-            Bucket=bucket, Key=f"{parquet_name}.parquet", Fileobj=buffer
-        )
-        return pd.read_parquet(buffer).convert_dtypes().replace({pd.NA: None})
-    except ClientError as e:
-        raise LoadError(f"Failed to get dataframe from parquet file. {e}")
+    parquet_file = io.BytesIO(parquet_file_object["Body"].read())
+    df = pd.read_parquet(parquet_file)
+    return df 
+
 
 
 def get_dataframe_values(df):
@@ -108,7 +109,7 @@ def get_dataframe_values(df):
 def store_table_in_wh(conn, query, table_rows, table_name):
     try:
         cursor = conn.cursor()
-        cursor.execute(f"DELETE FROM {table_name} *")
+        cursor.execute(f"DELETE FROM {table_name} *") #seems ineffcient?
         conn.commit()
         cursor.executemany(query, table_rows)
         conn.commit()
