@@ -27,7 +27,7 @@ def lambda_handler(event, context):
                 query = table_queries[table]
                 rows = get_dataframe_values(df)
                 store_table_in_wh(conn, query, rows, table)
-            else: print("Did not have query prepared for that table. Please contact devs and ask them to make one")
+            else: logging.warning(f"No query prepared for table {table}. Please contact devs.")
         return {"msg": "Data process successful."}
     except LoadError as e:
         logging.critical(e)
