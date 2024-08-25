@@ -64,7 +64,7 @@ def get_secrets(sm):
         - 'database','host','user','password'
     """
     try:
-        db = sm.get_secret_value(SecretId="whdb_name")["SecretString"]
+        db = sm.get_secret_value(SecretId="whdb_name")["SecretString"] #reduce number of API calls using OBS
         host = sm.get_secret_value(SecretId="whdb_host")["SecretString"]
         user = sm.get_secret_value(SecretId="whdb_user")["SecretString"]
         password = sm.get_secret_value(SecretId="whdb_pass")["SecretString"]
@@ -111,7 +111,7 @@ def get_dataframe_values(df):
 def store_table_in_wh(conn, query, table_rows, table_name):
     try:
         cursor = conn.cursor()
-        cursor.execute(f"DELETE FROM {table_name} *") #seems ineffcient?
+        cursor.execute(f"DELETE FROM {table_name} *") #seems ineffcient - why not carry forward the len logic from ingestion to process
         conn.commit()
         cursor.executemany(query, table_rows)
         conn.commit()
