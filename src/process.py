@@ -438,7 +438,7 @@ def get_dim_date(bucket, fact_sales_order, fact_payment, fact_purchase_order):
         try:
             buffer = io.BytesIO()
             s3.download_fileobj(Bucket=bucket, Key=f"dim_date.parquet", Fileobj=buffer)
-            s3_dates = pd.read_parquet(buffer)["date_id"]
+            s3_dates = pd.read_parquet(buffer)["date_id"].apply(lambda x: x.strftime('%Y-%m-%d'))
             dates.append(s3_dates)
         except ClientError:
             pass
@@ -479,7 +479,7 @@ def get_dim_date(bucket, fact_sales_order, fact_payment, fact_purchase_order):
         dim_date["day_name"] = dim_date["date_id"].dt.day_name()
         dim_date["month_name"] = dim_date["date_id"].dt.month_name()
         dim_date["quarter"] = dim_date["date_id"].dt.quarter
-        return dim_date.sort_values(by="date_id", ignore_index=True)
+        return dim_date.sort_values(by='date_id', ignore_index=True)
     except Exception as e:
         raise ProcessError(f"Failed to get dim_date. {e}")
 
