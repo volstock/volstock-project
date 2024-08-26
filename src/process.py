@@ -20,6 +20,9 @@ def lambda_handler(event, context):
         S3_PROCESS_BUCKET = get_bucket_name("S3_PROCESS_BUCKET")
         tables_names = event["tables"]
         update_tables_names = []
+        fact_purchase_order = None
+        fact_payment = None
+        fact_sales_order = None
         for table_name in tables_names:
             if table_name == "staff":
                 df_staff = get_dataframe_from_table_json(S3_INGEST_BUCKET, table_name)
@@ -125,9 +128,14 @@ def lambda_handler(event, context):
                 insert_table_to_update_tables_arr(
                     update_tables_names, "fact_purchase_order"
                 )
-        local_vars = locals()
-        if "fact_sales_order" in local_vars:
-            dim_date = get_dim_date(fact_sales_order)
+        if (
+            fact_sales_order is not None
+            or fact_payment is not None
+            or fact_purchase_order is not None
+        ):
+            dim_date = get_dim_date(
+                S3_PROCESS_BUCKET, fact_sales_order, fact_payment, fact_purchase_order
+            )
             dim_date_parquet = df_to_parquet(dim_date)
             store_parquet_file(S3_PROCESS_BUCKET, dim_date_parquet, "dim_date")
             insert_table_to_update_tables_arr(update_tables_names, "dim_date")
@@ -423,17 +431,39 @@ def get_fact_sales_order(df_sales_order):
         raise ProcessError(f"Failed to get fact_sales_order. {e}")
 
 
-def get_dim_date(fact_sales_order):
+def get_dim_date(bucket, fact_sales_order, fact_payment, fact_purchase_order):
     try:
+        dates = []
+        s3 = boto3.client("s3", region_name="eu-west-2")
+        try:
+            buffer = io.BytesIO()
+            s3.download_fileobj(Bucket=bucket, Key=f"dim_date.parquet", Fileobj=buffer)
+            s3_dates = pd.read_parquet(buffer)["date_id"]
+            dates.append(s3_dates)
+        except ClientError:
+            pass
+        if fact_sales_order is not None:
+            dates += [
+                fact_sales_order["created_date"],
+                fact_sales_order["last_updated_date"],
+                fact_sales_order["agreed_payment_date"],
+                fact_sales_order["agreed_delivery_date"],
+            ]
+        if fact_payment is not None:
+            dates += [
+                fact_payment["created_date"],
+                fact_payment["last_updated_date"],
+                fact_payment["payment_date"],
+            ]
+        if fact_purchase_order is not None:
+            dates += [
+                fact_purchase_order["created_date"],
+                fact_purchase_order["last_updated_date"],
+                fact_purchase_order["agreed_payment_date"],
+                fact_purchase_order["agreed_delivery_date"],
+            ]
         timestamps = (
-            pd.concat(
-                [
-                    fact_sales_order["created_date"],
-                    fact_sales_order["last_updated_date"],
-                    fact_sales_order["agreed_payment_date"],
-                    fact_sales_order["agreed_delivery_date"],
-                ]
-            )
+            pd.concat(dates)
             .drop_duplicates(ignore_index=True)
             .apply(lambda x: pd.to_datetime(x))
         )
@@ -449,7 +479,7 @@ def get_dim_date(fact_sales_order):
         dim_date["day_name"] = dim_date["date_id"].dt.day_name()
         dim_date["month_name"] = dim_date["date_id"].dt.month_name()
         dim_date["quarter"] = dim_date["date_id"].dt.quarter
-        return dim_date
+        return dim_date.sort_values(by="date_id", ignore_index=True)
     except Exception as e:
         raise ProcessError(f"Failed to get dim_date. {e}")
 

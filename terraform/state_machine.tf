@@ -155,7 +155,7 @@ resource "aws_iam_role_policy_attachment" "eventbridge_states_policy_attachment"
 }
 
 resource "aws_cloudwatch_event_rule" "state_machine_scheduler" {
-  schedule_expression = "rate(10 minutes)"
+  schedule_expression = "rate(30 minutes)"
 }
 
 resource "aws_cloudwatch_event_target" "state_machine_every_30_min" {

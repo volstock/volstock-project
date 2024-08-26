@@ -45,12 +45,26 @@ def lambda_handler(event, context):
                     S3_PROCESS_BUCKET, table_name
                 )
                 query = get_dim_counterparty_query()
-                get_dataframe_values(dim_counterparty, conn, table_name)
+                rows = get_dataframe_values(dim_counterparty, conn, table_name)
+                store_table_in_wh(conn, query, rows, table_name)
+            elif table_name == "dim_transaction":
+                dim_transaction = get_table_df_from_parquet(
+                    S3_PROCESS_BUCKET, table_name
+                )
+                query = get_dim_transaction_query()
+                rows = get_dataframe_values(dim_transaction, conn, table_name)
+                store_table_in_wh(conn, query, rows, table_name)
+            elif table_name == "dim_payment_type":
+                dim_payment_type = get_table_df_from_parquet(
+                    S3_PROCESS_BUCKET, table_name
+                )
+                query = get_dim_payment_type_query()
+                rows = get_dataframe_values(dim_payment_type, conn, table_name)
                 store_table_in_wh(conn, query, rows, table_name)
             elif table_name == "dim_date":
                 dim_date = get_table_df_from_parquet(S3_PROCESS_BUCKET, table_name)
                 query = get_dim_date_query()
-                get_dataframe_values(dim_date, conn, table_name)
+                rows = get_dataframe_values(dim_date, conn, table_name)
                 store_table_in_wh(conn, query, rows, table_name)
             elif table_name == "fact_sales_order":
                 fact_sales_order = get_table_df_from_parquet(
@@ -58,6 +72,18 @@ def lambda_handler(event, context):
                 )
                 query = get_fact_sales_order_query()
                 rows = get_dataframe_values(fact_sales_order, conn, table_name)
+                store_table_in_wh(conn, query, rows, table_name)
+            elif table_name == "fact_payment":
+                fact_payment = get_table_df_from_parquet(S3_PROCESS_BUCKET, table_name)
+                query = get_fact_payment_query()
+                rows = get_dataframe_values(fact_payment, conn, table_name)
+                store_table_in_wh(conn, query, rows, table_name)
+            elif table_name == "fact_purchase_order":
+                fact_purchase_order = get_table_df_from_parquet(
+                    S3_PROCESS_BUCKET, table_name
+                )
+                query = get_fact_purchase_order_query()
+                rows = get_dataframe_values(fact_purchase_order, conn, table_name)
                 store_table_in_wh(conn, query, rows, table_name)
         return {"msg": "Data process successful."}
     except LoadError as e:
@@ -124,7 +150,9 @@ def get_table_df_from_parquet(bucket, parquet_name):
 
 def get_dataframe_values(df, conn, table_name):
     try:
-        whdb_row_count = conn.execute(f'SELECT COUNT(*) FROM {table_name}')[0]
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
+        whdb_row_count = cursor.fetchone()[0]
         s3_row_count = len(df)
         row_diff = s3_row_count - whdb_row_count
         return df.tail(row_diff).values.tolist()
@@ -258,45 +286,69 @@ def get_fact_sales_order_query():
     return query
 
 
-# def get_dim_transaction_query():
-#     query = """
-#         INSERT INTO dim_transaction (
-#             transaction_id,
-#             transaction_type,
-#             sales_order_id,
-#             purchase_order_id
-#         )
-#         VALUES (%s, %s, %s, %s)
-#     """
-#     return query
+def get_dim_transaction_query():
+    query = """
+        INSERT INTO dim_transaction (
+            transaction_id,
+            transaction_type,
+            sales_order_id,
+            purchase_order_id
+        )
+        VALUES (%s, %s, %s, %s)
+    """
+    return query
 
 
-# def get_fact_payment_query():
-#     query = """
-#         INSERT INTO fact_payment (
-#             payment_id,
-#             created_date,
-#             created_time,
-#             last_updated_date,
-#             last_updated_time,
-#             transaction_id,
-#             counterparty_id,
-#             payment_amount,
-#             currency_id,
-#             payment_type_id,
-#             paid,
-#             payment_date
-#         )
-#         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-#     """
-#     return query
+def get_dim_payment_type_query():
+    query = """
+        INSERT INTO dim_payment_type (
+            payment_type_id,
+            payment_type_name
+        )
+        VALUES (%s, %s)
+    """
+    return query
 
-# def get_dim_payment_type_query():
-#     query = """
-#         INSERT INTO dim_payment_type (
-#             payment_type_id,
-#             payment_type_name
-#         )
-#         VALUES (%s, %s)
-#     """
-#     return query
+
+def get_fact_payment_query():
+    query = """
+        INSERT INTO fact_payment (
+            payment_id,
+            created_date,
+            created_time,
+            last_updated_date,
+            last_updated_time,
+            transaction_id,
+            counterparty_id,
+            payment_amount,
+            currency_id,
+            payment_type_id,
+            paid,
+            payment_date
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """
+    return query
+
+
+def get_fact_purchase_order_query():
+    query = """
+        INSERT INTO fact_purchase_order (
+            purchase_order_id,
+            created_date,
+            created_time,
+            last_updated_date,
+            last_updated_time,
+            staff_id,
+            counterparty_id,
+            item_code,
+            item_quantity,
+            item_unit_price,
+            currency_id,
+            agreed_delivery_date,
+            agreed_payment_date,
+            agreed_delivery_location_id
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """
+    return query
