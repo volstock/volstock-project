@@ -734,8 +734,10 @@ def test_get_fact_sales_order_error(mock_df_rename, sample_sales_order):
     assert str(e.value) == "Failed to get fact_sales_order. Mock exception"
 
 
-def test_get_dim_date(sample_sales_order):
-    result = get_dim_date(get_fact_sales_order(sample_sales_order))
+def test_get_dim_date(s3_bucket, sample_sales_order):
+    result = get_dim_date(
+        S3_MOCK_BUCKET_NAME, get_fact_sales_order(sample_sales_order), None, None
+    )
     timestamps = (
         pd.concat(
             [
@@ -760,13 +762,16 @@ def test_get_dim_date(sample_sales_order):
     expected["day_name"] = expected["date_id"].dt.day_name()
     expected["month_name"] = expected["date_id"].dt.month_name()
     expected["quarter"] = expected["date_id"].dt.quarter
-    assert expected.equals(result)
+    assert expected.sort_values(by="date_id", ignore_index=True).equals(result)
+
 
 @patch("pandas.concat")
 def test_get_dim_date_error(mock_concat, sample_sales_order):
     mock_concat.side_effect = Exception("Mock exception")
     with pytest.raises(ProcessError) as e:
-        get_dim_date(get_fact_sales_order(sample_sales_order))
+        get_dim_date(
+            S3_MOCK_BUCKET_NAME, get_fact_sales_order(sample_sales_order), None, None
+        )
     assert str(e.value) == "Failed to get dim_date. Mock exception"
 
 
