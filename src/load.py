@@ -23,41 +23,41 @@ def lambda_handler(event, context):
             if table_name == "dim_design":
                 dim_design = get_table_df_from_parquet(S3_PROCESS_BUCKET, table_name)
                 query = get_dim_design_query()
-                rows = get_dataframe_values(dim_design)
+                rows = get_dataframe_values(dim_design, conn, table_name)
                 store_table_in_wh(conn, query, rows, table_name)
             elif table_name == "dim_staff":
                 dim_staff = get_table_df_from_parquet(S3_PROCESS_BUCKET, table_name)
                 query = get_dim_staff_query()
-                rows = get_dataframe_values(dim_staff)
+                rows = get_dataframe_values(dim_staff, conn, table_name)
                 store_table_in_wh(conn, query, rows, table_name)
             elif table_name == "dim_location":
                 dim_location = get_table_df_from_parquet(S3_PROCESS_BUCKET, table_name)
                 query = get_dim_location_query()
-                rows = get_dataframe_values(dim_location)
+                rows = get_dataframe_values(dim_location, conn, table_name)
                 store_table_in_wh(conn, query, rows, table_name)
             elif table_name == "dim_currency":
                 dim_currency = get_table_df_from_parquet(S3_PROCESS_BUCKET, table_name)
                 query = get_dim_currency_query()
-                rows = get_dataframe_values(dim_currency)
+                rows = get_dataframe_values(dim_currency, conn, table_name)
                 store_table_in_wh(conn, query, rows, table_name)
             elif table_name == "dim_counterparty":
                 dim_counterparty = get_table_df_from_parquet(
                     S3_PROCESS_BUCKET, table_name
                 )
                 query = get_dim_counterparty_query()
-                rows = get_dataframe_values(dim_counterparty)
+                get_dataframe_values(dim_counterparty, conn, table_name)
                 store_table_in_wh(conn, query, rows, table_name)
             elif table_name == "dim_date":
                 dim_date = get_table_df_from_parquet(S3_PROCESS_BUCKET, table_name)
                 query = get_dim_date_query()
-                rows = get_dataframe_values(dim_date)
+                get_dataframe_values(dim_date, conn, table_name)
                 store_table_in_wh(conn, query, rows, table_name)
             elif table_name == "fact_sales_order":
                 fact_sales_order = get_table_df_from_parquet(
                     S3_PROCESS_BUCKET, table_name
                 )
                 query = get_fact_sales_order_query()
-                rows = get_dataframe_values(fact_sales_order)
+                rows = get_dataframe_values(fact_sales_order, conn, table_name)
                 store_table_in_wh(conn, query, rows, table_name)
         return {"msg": "Data process successful."}
     except LoadError as e:
@@ -122,9 +122,12 @@ def get_table_df_from_parquet(bucket, parquet_name):
         raise LoadError(f"Failed to get dataframe from parquet file. {e}")
 
 
-def get_dataframe_values(df):
+def get_dataframe_values(df, conn, table_name):
     try:
-        return df.values.tolist()
+        whdb_row_count = conn.execute(f'SELECT COUNT(*) FROM {table_name}')[0]
+        s3_row_count = len(df)
+        row_diff = s3_row_count - whdb_row_count
+        return df.tail(row_diff).values.tolist()
     except Exception as e:
         raise LoadError(f"Failed to get dataframe values. {e}")
 
@@ -132,8 +135,6 @@ def get_dataframe_values(df):
 def store_table_in_wh(conn, query, table_rows, table_name):
     try:
         cursor = conn.cursor()
-        cursor.execute(f"DELETE FROM {table_name} *")
-        conn.commit()
         cursor.executemany(query, table_rows)
         conn.commit()
     except DatabaseError as e:
