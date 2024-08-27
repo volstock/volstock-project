@@ -266,3 +266,4 @@ def test_get_fact_purchase_order_query():
     """
     test_func = get_fact_purchase_order_query()
     assert test_func == test_query
+    
