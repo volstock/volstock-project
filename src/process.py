@@ -20,129 +20,42 @@ def lambda_handler(event, context):
         S3_PROCESS_BUCKET = get_bucket_name("S3_PROCESS_BUCKET")
         tables_names = event["tables"]
         update_tables_names = []
-        fact_purchase_order = None
-        fact_payment = None
-        fact_sales_order = None
+        fact_purchase_order, fact_payment, fact_sales_order = None, None, None
+
+        processing_functions = {
+            "staff": process_staff,
+            "address": process_address,
+            "design": process_design,
+            "currency": process_currency,
+            "counterparty": process_counterparty,
+            "sales_order": process_sales_order,
+            "transaction": process_transaction,
+            "payment_type": process_payment_type,
+            "payment": process_payment,
+            "purchase_order": process_purchase_order,
+        }
+
         for table_name in tables_names:
-            if table_name == "staff":
-                df_staff = get_dataframe_from_table_json(S3_INGEST_BUCKET, table_name)
-                df_department = get_dataframe_from_table_json(
-                    S3_INGEST_BUCKET, "department"
-                )
-                dim_staff = get_dim_staff(df_staff, df_department)
-                dim_staff_parquet = df_to_parquet(dim_staff)
-                store_parquet_file(S3_PROCESS_BUCKET, dim_staff_parquet, "dim_staff")
-                insert_table_to_update_tables_arr(update_tables_names, "dim_staff")
-            elif table_name == "address":
-                df_address = get_dataframe_from_table_json(S3_INGEST_BUCKET, table_name)
-                dim_location = get_dim_location(df_address)
-                dim_location_parquet = df_to_parquet(dim_location)
-                store_parquet_file(
-                    S3_PROCESS_BUCKET, dim_location_parquet, "dim_location"
-                )
-                insert_table_to_update_tables_arr(update_tables_names, "dim_location")
-            elif table_name == "design":
-                df_design = get_dataframe_from_table_json(S3_INGEST_BUCKET, table_name)
-                dim_design = get_dim_design(df_design)
-                dim_design_parquet = df_to_parquet(dim_design)
-                store_parquet_file(S3_PROCESS_BUCKET, dim_design_parquet, "dim_design")
-                insert_table_to_update_tables_arr(update_tables_names, "dim_design")
-            elif table_name == "currency":
-                df_currency = get_dataframe_from_table_json(
-                    S3_INGEST_BUCKET, table_name
-                )
-                dim_currency = get_dim_currency(df_currency)
-                dim_currency_parquet = df_to_parquet(dim_currency)
-                store_parquet_file(
-                    S3_PROCESS_BUCKET, dim_currency_parquet, "dim_currency"
-                )
-                insert_table_to_update_tables_arr(update_tables_names, "dim_currency")
-            elif table_name == "counterparty":
-                df_counterparty = get_dataframe_from_table_json(
-                    S3_INGEST_BUCKET, table_name
-                )
-                df_address = get_dataframe_from_table_json(S3_INGEST_BUCKET, "address")
-                dim_counterparty = get_dim_counterparty(df_counterparty, df_address)
-                dim_counterparty_parquet = df_to_parquet(dim_counterparty)
-                store_parquet_file(
-                    S3_PROCESS_BUCKET, dim_counterparty_parquet, "dim_counterparty"
-                )
-                insert_table_to_update_tables_arr(
-                    update_tables_names, "dim_counterparty"
-                )
-            elif table_name == "sales_order":
-                df_sales_order = get_dataframe_from_table_json(
-                    S3_INGEST_BUCKET, table_name
-                )
-                fact_sales_order = get_fact_sales_order(df_sales_order)
-                fact_sales_order_parquet = df_to_parquet(fact_sales_order)
-                store_parquet_file(
-                    S3_PROCESS_BUCKET, fact_sales_order_parquet, "fact_sales_order"
-                )
-                insert_table_to_update_tables_arr(
-                    update_tables_names, "fact_sales_order"
-                )
-            elif table_name == "transaction":
-                df_transaction = get_dataframe_from_table_json(
-                    S3_INGEST_BUCKET, table_name
-                )
-                dim_transaction = get_dim_transaction(df_transaction)
-                dim_transaction_parquet = df_to_parquet(dim_transaction)
-                store_parquet_file(
-                    S3_PROCESS_BUCKET, dim_transaction_parquet, "dim_transaction"
-                )
-                insert_table_to_update_tables_arr(
-                    update_tables_names, "dim_transaction"
-                )
-            elif table_name == "payment_type":
-                df_payment_type = get_dataframe_from_table_json(
-                    S3_INGEST_BUCKET, table_name
-                )
-                dim_payment_type = get_dim_payment_type(df_payment_type)
-                dim_payment_type_parquet = df_to_parquet(dim_payment_type)
-                store_parquet_file(
-                    S3_PROCESS_BUCKET, dim_payment_type_parquet, "dim_payment_type"
-                )
-                insert_table_to_update_tables_arr(
-                    update_tables_names, "dim_payment_type"
-                )
-            elif table_name == "payment":
-                df_payment = get_dataframe_from_table_json(S3_INGEST_BUCKET, table_name)
-                fact_payment = get_fact_payment(df_payment)
-                fact_payment_parquet = df_to_parquet(fact_payment)
-                store_parquet_file(
-                    S3_PROCESS_BUCKET, fact_payment_parquet, "fact_payment"
-                )
-                insert_table_to_update_tables_arr(update_tables_names, "fact_payment")
-            elif table_name == "purchase_order":
-                df_purchase_order = get_dataframe_from_table_json(
-                    S3_INGEST_BUCKET, table_name
-                )
-                fact_purchase_order = get_fact_purchase_order(df_purchase_order)
-                fact_purchase_order_parquet = df_to_parquet(fact_purchase_order)
-                store_parquet_file(
-                    S3_PROCESS_BUCKET,
-                    fact_purchase_order_parquet,
-                    "fact_purchase_order",
-                )
-                insert_table_to_update_tables_arr(
-                    update_tables_names, "fact_purchase_order"
-                )
-        if (
-            fact_sales_order is not None
-            or fact_payment is not None
-            or fact_purchase_order is not None
-        ):
-            dim_date = get_dim_date(
-                S3_PROCESS_BUCKET, fact_sales_order, fact_payment, fact_purchase_order
-            )
-            dim_date_parquet = df_to_parquet(dim_date)
-            store_parquet_file(S3_PROCESS_BUCKET, dim_date_parquet, "dim_date")
-            insert_table_to_update_tables_arr(update_tables_names, "dim_date")
+            if table_name in processing_functions:
+                result = processing_functions[table_name](S3_INGEST_BUCKET, S3_PROCESS_BUCKET)
+                if result is not None:
+                    if isinstance(result, tuple):
+                        processed_table_name, fact_table = result
+                        update_tables_names.append(processed_table_name)
+                        if processed_table_name == "fact_sales_order":
+                            fact_sales_order = fact_table
+                        elif processed_table_name == "fact_payment":
+                            fact_payment = fact_table
+                        elif processed_table_name == "fact_purchase_order":
+                            fact_purchase_order = fact_table
+                    else:
+                        update_tables_names.append(result)
         return {"msg": "Data process successful.", "tables": update_tables_names}
     except ProcessError as e:
         logging.critical(e)
         return {"msg": "Failed to process data", "err": str(e)}
+
+
 
 
 def insert_table_to_update_tables_arr(update_tables_names, table_name):
@@ -503,3 +416,84 @@ def store_parquet_file(bucket, parquet_file, parquet_name):
         s3.put_object(Body=parquet_file, Bucket=bucket, Key=f"{parquet_name}.parquet")
     except ClientError as e:
         raise ProcessError(f"Failed to store parquet_file in bucket. {e}")
+
+def process_staff(S3_INGEST_BUCKET, S3_PROCESS_BUCKET):
+    df_staff = get_dataframe_from_table_json(S3_INGEST_BUCKET, "staff")
+    df_department = get_dataframe_from_table_json(S3_INGEST_BUCKET, "department")
+    dim_staff = get_dim_staff(df_staff, df_department)
+    dim_staff_parquet = df_to_parquet(dim_staff)
+    store_parquet_file(S3_PROCESS_BUCKET, dim_staff_parquet, "dim_staff")
+    return "dim_staff"
+
+
+def process_address(S3_INGEST_BUCKET, S3_PROCESS_BUCKET):
+    df_address = get_dataframe_from_table_json(S3_INGEST_BUCKET, "address")
+    dim_location = get_dim_location(df_address)
+    dim_location_parquet = df_to_parquet(dim_location)
+    store_parquet_file(S3_PROCESS_BUCKET, dim_location_parquet, "dim_location")
+    return "dim_location"
+
+
+def process_design(S3_INGEST_BUCKET, S3_PROCESS_BUCKET):
+    df_design = get_dataframe_from_table_json(S3_INGEST_BUCKET, "design")
+    dim_design = get_dim_design(df_design)
+    dim_design_parquet = df_to_parquet(dim_design)
+    store_parquet_file(S3_PROCESS_BUCKET, dim_design_parquet, "dim_design")
+    return "dim_design"
+
+
+def process_currency(S3_INGEST_BUCKET, S3_PROCESS_BUCKET):
+    df_currency = get_dataframe_from_table_json(S3_INGEST_BUCKET, "currency")
+    dim_currency = get_dim_currency(df_currency)
+    dim_currency_parquet = df_to_parquet(dim_currency)
+    store_parquet_file(S3_PROCESS_BUCKET, dim_currency_parquet, "dim_currency")
+    return "dim_currency"
+
+
+def process_counterparty(S3_INGEST_BUCKET, S3_PROCESS_BUCKET):
+    df_counterparty = get_dataframe_from_table_json(S3_INGEST_BUCKET, "counterparty")
+    df_address = get_dataframe_from_table_json(S3_INGEST_BUCKET, "address")
+    dim_counterparty = get_dim_counterparty(df_counterparty, df_address)
+    dim_counterparty_parquet = df_to_parquet(dim_counterparty)
+    store_parquet_file(S3_PROCESS_BUCKET, dim_counterparty_parquet, "dim_counterparty")
+    return "dim_counterparty"
+
+
+def process_sales_order(S3_INGEST_BUCKET, S3_PROCESS_BUCKET):
+    df_sales_order = get_dataframe_from_table_json(S3_INGEST_BUCKET, "sales_order")
+    fact_sales_order = get_fact_sales_order(df_sales_order)
+    fact_sales_order_parquet = df_to_parquet(fact_sales_order)
+    store_parquet_file(S3_PROCESS_BUCKET, fact_sales_order_parquet, "fact_sales_order")
+    return "fact_sales_order", fact_sales_order
+
+
+def process_transaction(S3_INGEST_BUCKET, S3_PROCESS_BUCKET):
+    df_transaction = get_dataframe_from_table_json(S3_INGEST_BUCKET, "transaction")
+    dim_transaction = get_dim_transaction(df_transaction)
+    dim_transaction_parquet = df_to_parquet(dim_transaction)
+    store_parquet_file(S3_PROCESS_BUCKET, dim_transaction_parquet, "dim_transaction")
+    return "dim_transaction"
+
+
+def process_payment_type(S3_INGEST_BUCKET, S3_PROCESS_BUCKET):
+    df_payment_type = get_dataframe_from_table_json(S3_INGEST_BUCKET, "payment_type")
+    dim_payment_type = get_dim_payment_type(df_payment_type)
+    dim_payment_type_parquet = df_to_parquet(dim_payment_type)
+    store_parquet_file(S3_PROCESS_BUCKET, dim_payment_type_parquet, "dim_payment_type")
+    return "dim_payment_type"
+
+
+def process_payment(S3_INGEST_BUCKET, S3_PROCESS_BUCKET):
+    df_payment = get_dataframe_from_table_json(S3_INGEST_BUCKET, "payment")
+    fact_payment = get_fact_payment(df_payment)
+    fact_payment_parquet = df_to_parquet(fact_payment)
+    store_parquet_file(S3_PROCESS_BUCKET, fact_payment_parquet, "fact_payment")
+    return "fact_payment", fact_payment
+
+
+def process_purchase_order(S3_INGEST_BUCKET, S3_PROCESS_BUCKET):
+    df_purchase_order = get_dataframe_from_table_json(S3_INGEST_BUCKET, "purchase_order")
+    fact_purchase_order = get_fact_purchase_order(df_purchase_order)
+    fact_purchase_order_parquet = df_to_parquet(fact_purchase_order)
+    store_parquet_file(S3_PROCESS_BUCKET, fact_purchase_order_parquet, "fact_purchase_order")
+    return "fact_purchase_order", fact_purchase_order
