@@ -4,7 +4,24 @@ import boto3
 import pytest
 import unittest
 from unittest.mock import patch, MagicMock
-from src.load import get_connection, get_dim_payment_type_query, get_fact_purchase_order_query, get_fact_payment_query, get_dim_transaction_query, get_dim_transaction_query, get_fact_sales_order_query, get_secrets, get_dim_design_query, get_dim_staff_query, get_dim_location_query, get_dim_currency_query, get_dim_counterparty_query, get_dim_date_query
+from src.load import (
+    lambda_handler,
+    LoadError,
+    get_connection,
+    get_dim_payment_type_query,
+    get_fact_purchase_order_query,
+    get_fact_payment_query,
+    get_dim_transaction_query,
+    get_dim_transaction_query,
+    get_fact_sales_order_query,
+    get_secrets,
+    get_dim_design_query,
+    get_dim_staff_query,
+    get_dim_location_query,
+    get_dim_currency_query,
+    get_dim_counterparty_query,
+    get_dim_date_query,
+)
 
 
 @pytest.fixture(scope="function")
@@ -38,6 +55,34 @@ def s3_bucket(s3):
         Bucket=S3_MOCK_BUCKET_NAME,
         CreateBucketConfiguration={"LocationConstraint": "eu-west-2"},
     )
+
+
+@pytest.fixture(scope="function")
+def mock_s3_bucket_env():
+    """Mock the environment variable for S3 bucket."""
+    os.environ["S3_PROCESS_BUCKET"] = "mock-s3-bucket"
+    yield
+    del os.environ["S3_PROCESS_BUCKET"]
+
+
+@pytest.fixture(scope="function")
+def lambda_event():
+    """Mock Lambda event data."""
+    return {
+        "tables": [
+            "dim_design",
+            "dim_staff",
+            "dim_location",
+            "dim_currency",
+            "dim_counterparty",
+            "dim_transaction",
+            "dim_payment_type",
+            "dim_date",
+            "fact_sales_order",
+            "fact_payment",
+            "fact_purchase_order",
+        ]
+    }
 
 
 class TestConnection:
@@ -77,6 +122,106 @@ class TestConnection:
             password="wh_password",
         )
 
+
+class TestLambdaHandler:
+    @patch("src.load.get_connection")
+    @patch("src.load.get_table_df_from_parquet")
+    @patch("src.load.store_table_in_wh")
+    def test_lambda_handler_success(
+        self,
+        mock_store_table_in_wh,
+        mock_get_table_df,
+        mock_get_connection,
+        lambda_event,
+        mock_s3_bucket_env,
+    ):
+        # Mocking connection and data frame
+        mock_conn = MagicMock()
+        mock_get_connection.return_value = mock_conn
+
+        mock_df = MagicMock()
+        mock_get_table_df.return_value = mock_df
+
+        # Execute lambda_handler
+        result = lambda_handler(lambda_event, None)
+
+        # Assertions
+        assert result == {"msg": "Data process successful."}
+        mock_get_connection.assert_called_once()
+        assert mock_get_table_df.called
+        assert mock_store_table_in_wh.called
+
+    @patch("src.load.get_connection", side_effect=LoadError("Connection failed"))
+    def test_lambda_handler_connection_failure(
+        self, mock_get_connection, lambda_event, mock_s3_bucket_env
+    ):
+        # Execute lambda_handler
+        result = lambda_handler(lambda_event, None)
+
+        # Assertions
+        assert result == {
+            "msg": "Failed to load data into warehouse",
+            "err": "Connection failed",
+        }
+        mock_get_connection.assert_called_once()
+
+    @patch(
+        "src.load.get_table_df_from_parquet",
+        side_effect=LoadError("Failed to load table from S3"),
+    )
+    @patch("src.load.get_connection")
+    def test_lambda_handler_s3_failure(
+        self, mock_get_connection, mock_get_table_df, lambda_event, mock_s3_bucket_env
+    ):
+        # Mocking connection
+        mock_conn = MagicMock()
+        mock_get_connection.return_value = mock_conn
+
+        # Execute lambda_handler
+        result = lambda_handler(lambda_event, None)
+
+        # Assertions
+        assert result == {
+            "msg": "Failed to load data into warehouse",
+            "err": "Failed to load table from S3",
+        }
+        mock_get_connection.assert_called_once()
+        mock_get_table_df.assert_called_once()
+
+    @patch("src.load.get_table_df_from_parquet")
+    @patch(
+        "src.load.store_table_in_wh",
+        side_effect=LoadError("Failed to store table in WH"),
+    )
+    @patch("src.load.get_connection")
+    def test_lambda_handler_store_failure(
+        self,
+        mock_get_connection,
+        mock_store_table_in_wh,
+        mock_get_table_df,
+        lambda_event,
+        mock_s3_bucket_env,
+    ):
+        # Mocking connection and data frame
+        mock_conn = MagicMock()
+        mock_get_connection.return_value = mock_conn
+
+        mock_df = MagicMock()
+        mock_get_table_df.return_value = mock_df
+
+        # Execute lambda_handler
+        result = lambda_handler(lambda_event, None)
+
+        # Assertions
+        assert result == {
+            "msg": "Failed to load data into warehouse",
+            "err": "Failed to store table in WH",
+        }
+        mock_get_connection.assert_called_once()
+        assert mock_get_table_df.called
+        mock_store_table_in_wh.assert_called_once()
+
+
 def test_get_dim_design_query():
     test_query = """
         INSERT INTO dim_design (
@@ -90,6 +235,7 @@ def test_get_dim_design_query():
     test_func = get_dim_design_query()
 
     assert test_func == test_query
+
 
 def test_get_dim_staff_query():
     test_query = """
@@ -106,6 +252,7 @@ def test_get_dim_staff_query():
     test_func = get_dim_staff_query()
 
     assert test_func == test_query
+
 
 def test_get_dim_location_query():
     test_query = """
@@ -125,6 +272,7 @@ def test_get_dim_location_query():
 
     assert test_func == test_query
 
+
 def test_get_dim_currency_query():
     test_query = """
         INSERT INTO dim_currency (
@@ -137,6 +285,7 @@ def test_get_dim_currency_query():
     test_func = get_dim_currency_query()
 
     assert test_func == test_query
+
 
 def test_get_dim_counterparty_query():
     test_query = """
@@ -157,6 +306,7 @@ def test_get_dim_counterparty_query():
 
     assert test_func == test_query
 
+
 def test_get_dim_date_query():
     test_query = """
         INSERT INTO dim_date (
@@ -174,6 +324,7 @@ def test_get_dim_date_query():
     test_func = get_dim_date_query()
 
     assert test_func == test_query
+
 
 def test_get_fact_sales_order_query():
     test_query = """
@@ -197,6 +348,7 @@ def test_get_fact_sales_order_query():
     """
     test_func = get_fact_sales_order_query()
     assert test_func == test_query
+
 
 def test_get_dim_transaction_query():
     test_query = """
@@ -223,6 +375,7 @@ def test_get_dim_payment_type_query():
     test_func = get_dim_payment_type_query()
     assert test_func == test_query
 
+
 def test_get_fact_payment_query():
     test_query = """
         INSERT INTO fact_payment (
@@ -243,6 +396,7 @@ def test_get_fact_payment_query():
     """
     test_func = get_fact_payment_query()
     assert test_func == test_query
+
 
 def test_get_fact_purchase_order_query():
     test_query = """
@@ -266,4 +420,3 @@ def test_get_fact_purchase_order_query():
     """
     test_func = get_fact_purchase_order_query()
     assert test_func == test_query
-    
