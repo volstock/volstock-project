@@ -125,7 +125,7 @@ class TestLambdaHandler:
 
         # Assertions
         assert result == {"msg": "Data process successful."}
-        assert mock_get_connection.called_once()
+        mock_get_connection.assert_called_once()
         assert mock_get_table_df.called
         assert mock_store_table_in_wh.called
 
@@ -179,5 +179,5 @@ class TestLambdaHandler:
             "err": "Failed to store table in WH",
         }
         mock_get_connection.assert_called_once()
-        mock_get_table_df.assert_called()
+        assert mock_get_table_df.called
         mock_store_table_in_wh.assert_called_once()
