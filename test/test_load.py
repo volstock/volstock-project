@@ -4,7 +4,7 @@ import boto3
 import pytest
 import unittest
 from unittest.mock import patch, MagicMock
-from src.load import get_connection, get_fact_purchase_order_query, get_fact_payment_query, get_dim_transaction_query, get_dim_transaction_query, get_fact_sales_order_query, get_secrets, get_dim_design_query, get_dim_staff_query, get_dim_location_query, get_dim_currency_query, get_dim_counterparty_query, get_dim_date_query
+from src.load import get_connection, get_dim_payment_type_query, get_fact_purchase_order_query, get_fact_payment_query, get_dim_transaction_query, get_dim_transaction_query, get_fact_sales_order_query, get_secrets, get_dim_design_query, get_dim_staff_query, get_dim_location_query, get_dim_currency_query, get_dim_counterparty_query, get_dim_date_query
 
 
 @pytest.fixture(scope="function")
@@ -220,7 +220,7 @@ def test_get_dim_payment_type_query():
         )
         VALUES (%s, %s)
     """
-    test_func = get_dim_transaction_query()
+    test_func = get_dim_payment_type_query()
     assert test_func == test_query
 
 def test_get_fact_payment_query():
