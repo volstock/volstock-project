@@ -122,6 +122,8 @@ class TestConnection:
     @patch("src.extract.is_bucket_empty")
     @patch("src.extract.get_date")
     @patch("boto3.client")
+
+    
     def test_lambda_handler_success(
         self,
         mock_boto_client,
@@ -130,6 +132,8 @@ class TestConnection:
         mock_get_table_names,
         mock_get_connection,
     ):
+        global S3_INGEST_BUCKET
+        S3_INGEST_BUCKET = S3_MOCK_BUCKET_NAME
         mock_s3_client = MagicMock()
         mock_boto_client.return_value = mock_s3_client
         mock_get_connection.return_value = MagicMock()

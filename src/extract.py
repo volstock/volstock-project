@@ -55,14 +55,23 @@ def lambda_handler(event, context):
     triggered by an EventBridge event that starts the ingestion process.
     """
     try:
+        global S3_INGEST_BUCKET 
         S3_INGEST_BUCKET = get_bucket_name("S3_INGEST_BUCKET")
-        conn = get_connection()
-        is_empty = is_bucket_empty(S3_INGEST_BUCKET)
-        tables = get_table_names(conn)
         date = format_date(datetime.now())
+        
+        conn = get_connection()
+        tables = get_table_names(conn)
+        
         update_tables_names = []
-        if not is_empty:
-            latest_date = get_date(S3_INGEST_BUCKET)
+        
+        if is_bucket_empty():
+            store_date_in_bucket(date)
+            for table_name in tables:
+                update_tables_names.append(table_name)
+                dict_table = get_dict_table(conn, table_name)
+                store_table_in_bucket(dict_table, table_name, date)
+        else:
+            latest_date = get_date()
             for table_name in tables:
                 copy_table(
                     S3_INGEST_BUCKET,
@@ -70,29 +79,22 @@ def lambda_handler(event, context):
                     f"archive/{latest_date}/{table_name}.json",
                 )
                 needs_update, updated_dict_table = update_dict_table(
-                    S3_INGEST_BUCKET, table_name, latest_date, conn
+                    table_name, latest_date, conn
                 )
                 if needs_update:
                     update_tables_names.append(table_name)
                     store_table_in_bucket(
-                        S3_INGEST_BUCKET, updated_dict_table, table_name, date
+                        updated_dict_table, table_name, date
                     )
                 else:
                     copy_table(
-                        S3_INGEST_BUCKET,
                         f"latest/{latest_date}/{table_name}.json",
                         f"latest/{date}/{table_name}.json",
                     )
                 delete_table(
-                    S3_INGEST_BUCKET, f"latest/{latest_date}/{table_name}.json"
+                    f"latest/{latest_date}/{table_name}.json"
                 )
-            store_date_in_bucket(S3_INGEST_BUCKET, date)
-        else:
-            store_date_in_bucket(S3_INGEST_BUCKET, date)
-            for table_name in tables:
-                update_tables_names.append(table_name)
-                dict_table = get_dict_table(conn, table_name)
-                store_table_in_bucket(S3_INGEST_BUCKET, dict_table, table_name, date)
+            store_date_in_bucket(date)          
         return {"msg": "Ingestion successful", "tables": update_tables_names}
     except IngestError as e:
         response = {"msg": "Failed to ingest data", "err": str(e)}
@@ -219,7 +221,7 @@ def get_dict_table(conn, table):
         raise IngestError(f"Failed to get table values, {e}")
 
 
-def is_bucket_empty(bucket):
+def is_bucket_empty():
     """
     Checks whether the S3 bucket is empty.
 
@@ -234,7 +236,7 @@ def is_bucket_empty(bucket):
     """
     try:
         s3 = boto3.client("s3", region_name="eu-west-2")
-        objects = s3.list_objects_v2(Bucket=bucket, Prefix="latest/")
+        objects = s3.list_objects_v2(Bucket=S3_INGEST_BUCKET, Prefix="latest/")
         if "Contents" not in objects:
             return True
         return False
@@ -260,7 +262,7 @@ def delete_table(bucket, key):
         raise IngestError(f"Failed to delete table. {e}")
 
 
-def copy_table(bucket, source_key, destination_key):
+def copy_table(source_key, destination_key):
     """
     Copies a table from latest folder to archive folder within the S3 bucket.
 
@@ -275,15 +277,15 @@ def copy_table(bucket, source_key, destination_key):
     try:
         s3 = boto3.client("s3", region_name="eu-west-2")
         s3.copy_object(
-            Bucket=bucket,
-            CopySource={"Bucket": bucket, "Key": f"{source_key}"},
+            Bucket=S3_INGEST_BUCKET,
+            CopySource={"Bucket": S3_INGEST_BUCKET, "Key": f"{source_key}"},
             Key=f"{destination_key}",
         )
     except ClientError as e:
         raise IngestError(f"Failed to copy table. {e}")
 
 
-def store_table_in_bucket(bucket, dict_table, table_name, date):
+def store_table_in_bucket(dict_table, table_name, date):
     """
     Stores a table (in dictionary format) in the S3 bucket in the 'latest' folder
     with the current date.
@@ -301,14 +303,14 @@ def store_table_in_bucket(bucket, dict_table, table_name, date):
         s3 = boto3.client("s3", region_name="eu-west-2")
         s3.put_object(
             Body=json.dumps(dict_table, indent=4, default=str).encode(),
-            Bucket=bucket,
+            Bucket=S3_INGEST_BUCKET,
             Key=f"latest/{date}/{table_name}.json",
         )
     except ClientError as e:
         raise IngestError(f"Failed to store table in bucket. {e}")
 
 
-def store_date_in_bucket(bucket, date):
+def store_date_in_bucket(date):
     """
     Stores the current date in the S3 bucket under the key 'latest_date'.
 
@@ -323,14 +325,14 @@ def store_date_in_bucket(bucket, date):
         s3 = boto3.client("s3", region_name="eu-west-2")
         s3.put_object(
             Body=date.encode(),
-            Bucket=bucket,
+            Bucket=S3_INGEST_BUCKET,
             Key="latest_date",
         )
     except ClientError as e:
         raise IngestError(f"Failed to store date in bucket. {e}")
 
 
-def get_date(bucket):
+def get_date():
     """
     Retrieves the latest ingestion date from the S3 bucket.
 
@@ -345,13 +347,13 @@ def get_date(bucket):
     """
     try:
         s3 = boto3.client("s3", region_name="eu-west-2")
-        date_object = s3.get_object(Bucket=bucket, Key="latest_date")
+        date_object = s3.get_object(Bucket=S3_INGEST_BUCKET, Key="latest_date")
         return date_object["Body"].read().decode()
     except ClientError as e:
         raise IngestError(f"Failed to get date from bucket. {e}")
 
 
-def update_dict_table(bucket, table_name, latest_date, conn):
+def update_dict_table(table_name, latest_date, conn):
     """
     Updates a dictionary table with new rows from the database, if any are available.
 
@@ -372,7 +374,7 @@ def update_dict_table(bucket, table_name, latest_date, conn):
     try:
         s3 = boto3.client("s3", region_name="eu-west-2")
         table_object = s3.get_object(
-            Bucket=bucket, Key=f"latest/{latest_date}/{table_name}.json"
+            Bucket=S3_INGEST_BUCKET, Key=f"latest/{latest_date}/{table_name}.json"
         )
         dict_table = json.loads(table_object["Body"].read().decode())
         
